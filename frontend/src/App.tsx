@@ -12,6 +12,7 @@ import {
   Maximize2,
   Globe,
   Menu,
+  BusFront,
 } from "lucide-react";
 import { TerminalView } from "./components/TerminalView";
 import { ChatView } from "./components/ChatView";
@@ -20,6 +21,7 @@ import { TeamView } from "./components/TeamView";
 import { UITab } from "./components/UITab";
 import { ShellTab } from "./components/ShellTab";
 import { BrowserView } from "./components/BrowserView";
+import { TransportView } from "./components/TransportView";
 import { LoginButton } from "./components/LoginButton";
 import { RunningChip } from "./components/RunningChip";
 import { useBusyState } from "./hooks/useBusyState";
@@ -55,7 +57,15 @@ import { ContextWarningBanner } from "./components/ContextWarningBanner";
 import { useEditingShortcuts } from "./hooks/useEditingShortcuts";
 import { send, subscribe } from "./hooks/useIPC";
 
-type Tab = "terminal" | "chat" | "files" | "team" | "ui" | "shell" | "browser";
+type Tab =
+  | "terminal"
+  | "chat"
+  | "files"
+  | "transport"
+  | "team"
+  | "ui"
+  | "shell"
+  | "browser";
 
 // Fires `frontend_ready` once on mount. Mounted only after both
 // startup modals (working-directory + secrets-backend) dismiss, so
@@ -72,6 +82,7 @@ const ALL_TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "chat", label: "Chat", icon: <MessageSquare size={14} /> },
   { id: "terminal", label: "Terminal", icon: <Terminal size={14} /> },
   { id: "files", label: "Files", icon: <FolderTree size={14} /> },
+  { id: "transport", label: "Transport", icon: <BusFront size={14} /> },
   { id: "team", label: "Team", icon: <Users size={14} /> },
   // dev-plan/33 Tier 2: GUI Shell picker (iframe-loaded installable
   // domain frontends). Renamed from "Shell" → "UI" once the new
@@ -1093,6 +1104,7 @@ export default function App() {
                   <ChatView active={isActive} modalOpen={modalOpen} />
                 )}
                 {id === "files" && <FilesView active={isActive} />}
+                {id === "transport" && <TransportView active={isActive} />}
                 {id === "team" && <TeamView />}
                 {id === "ui" && (
                   <UITab active={isActive} fullscreen={fullscreen} />
