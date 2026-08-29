@@ -5850,6 +5850,66 @@ pub fn handle_ipc(msg: Value, ctx: &IpcContext) -> bool {
             }
         }
 
+        // ── Transport workspace project persistence ───────────────
+        // Plain JSON projects live under `.thclaws/transport/projects/`.
+        // These transport-agnostic arms work in both the desktop WebView
+        // and `--serve` mode; the frontend owns semantic graph validation.
+        "transport_project_list" => {
+            let payload = match crate::transport_project::list() {
+                Ok(projects) => serde_json::json!({
+                    "type": "transport_project_list",
+                    "ok": true,
+                    "projects": projects,
+                }),
+                Err(error) => serde_json::json!({
+                    "type": "transport_project_list",
+                    "ok": false,
+                    "projects": [],
+                    "error": error,
+                }),
+            };
+            (ctx.dispatch)(payload.to_string());
+        }
+
+        "transport_project_save" => {
+            let name = msg.get("name").and_then(|v| v.as_str()).unwrap_or("");
+            let project = msg
+                .get("project")
+                .cloned()
+                .unwrap_or(serde_json::Value::Null);
+            let payload = match crate::transport_project::save(name, &project) {
+                Ok(summary) => serde_json::json!({
+                    "type": "transport_project_saved",
+                    "ok": true,
+                    "project": summary,
+                }),
+                Err(error) => serde_json::json!({
+                    "type": "transport_project_saved",
+                    "ok": false,
+                    "error": error,
+                }),
+            };
+            (ctx.dispatch)(payload.to_string());
+        }
+
+        "transport_project_load" => {
+            let id = msg.get("id").and_then(|v| v.as_str()).unwrap_or("");
+            let payload = match crate::transport_project::load(id) {
+                Ok((summary, project)) => serde_json::json!({
+                    "type": "transport_project_loaded",
+                    "ok": true,
+                    "summary": summary,
+                    "project": project,
+                }),
+                Err(error) => serde_json::json!({
+                    "type": "transport_project_loaded",
+                    "ok": false,
+                    "error": error,
+                }),
+            };
+            (ctx.dispatch)(payload.to_string());
+        }
+
         // ── SSO sidebar (M6.36 SERVE9h) ────────────────────────────
         "sso_status" => {
             (ctx.dispatch)(crate::sso::build_state_payload().to_string());

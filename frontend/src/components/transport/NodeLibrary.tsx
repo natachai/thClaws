@@ -1,14 +1,5 @@
 import { GripVertical, PanelLeftClose, PanelLeftOpen } from "lucide-react";
-
-const TRANSPORT_NODES = [
-  "Input Data",
-  "Trip Generation",
-  "Trip Distribution",
-  "Modal Split",
-  "Traffic Assignment",
-  "Transit Assignment",
-  "Skim",
-] as const;
+import { DATA_NODE_TYPES, TRANSPORT_NODE_TYPES } from "./transportTypes";
 
 type NodeLibraryProps = {
   collapsed: boolean;
@@ -73,28 +64,37 @@ export function NodeLibrary({
         className={`flex flex-col gap-2 overflow-auto p-3 ${collapsed ? "invisible absolute inset-0 pointer-events-none" : ""}`}
         aria-hidden={collapsed}
       >
-        {TRANSPORT_NODES.map((node) => (
-          <button
-            key={node}
-            type="button"
-            className="flex w-full items-center gap-2 rounded-md border px-3 py-2.5 text-left text-sm transition-colors hover:border-[var(--accent-dim)]"
-            style={{
-              background: "var(--bg-tertiary)",
-              borderColor: "var(--border)",
-              color: "var(--text-primary)",
-              cursor: "grab",
-            }}
-            aria-label={`${node} modelling component`}
-          >
-            <GripVertical
-              size={14}
-              className="shrink-0"
-              style={{ color: "var(--text-secondary)" }}
-            />
-            <span>{node}</span>
-          </button>
+        <p className="px-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>Data</p>
+        {DATA_NODE_TYPES.map((node) => (
+          <NodeLibraryButton key={node.transportType} label={node.label} transportType={node.transportType} description={`${node.dataType} input`} />
+        ))}
+        <p className="mt-2 px-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>Modelling</p>
+        {TRANSPORT_NODE_TYPES.map((node) => (
+          <NodeLibraryButton key={node.transportType} label={node.label} transportType={node.transportType} description="Model component" />
         ))}
       </div>
     </section>
+  );
+}
+
+function NodeLibraryButton({ label, transportType, description }: { label: string; transportType: string; description: string }) {
+  return (
+    <button
+      type="button"
+      draggable
+      onDragStart={(event) => {
+        event.dataTransfer.setData("application/thclaws-transport-node", transportType);
+        event.dataTransfer.effectAllowed = "copy";
+      }}
+      className="flex w-full items-center gap-2 rounded-md border px-3 py-2.5 text-left transition-colors hover:border-[var(--accent-dim)]"
+      style={{ background: "var(--bg-tertiary)", borderColor: "var(--border)", color: "var(--text-primary)", cursor: "grab" }}
+      aria-label={`${label} transport component`}
+    >
+      <GripVertical size={14} className="shrink-0" style={{ color: "var(--text-secondary)" }} />
+      <span className="min-w-0">
+        <span className="block text-sm">{label}</span>
+        <span className="block text-[10px]" style={{ color: "var(--text-secondary)" }}>{description}</span>
+      </span>
+    </button>
   );
 }

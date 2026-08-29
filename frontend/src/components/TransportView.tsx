@@ -1,8 +1,14 @@
 import { useEffect, useRef, useState } from "react";
+import { addEdge, applyEdgeChanges, applyNodeChanges, type Connection, type EdgeChange, type NodeChange } from "@xyflow/react";
 import { GISViewer } from "./transport/GISViewer";
 import { NodeLibrary } from "./transport/NodeLibrary";
 import { PanelSplitter } from "./transport/PanelSplitter";
 import { WorkflowCanvas } from "./transport/WorkflowCanvas";
+import { TransportProjectToolbar, type SavedTransportProject } from "./transport/TransportProjectToolbar";
+import { TransportValidationPanel } from "./transport/TransportValidationPanel";
+import { ALL_TRANSPORT_NODE_TYPES, INITIAL_TRANSPORT_PROJECT, createEmptyTransportProject, parseTransportProject, type TransportWorkflowNode } from "./transport/transportTypes";
+import { validateTransportProject, type TransportValidationResult } from "./transport/transportValidation";
+import { send, subscribe } from "../hooks/useIPC";
 
 type TransportViewProps = {
   active: boolean;
@@ -53,6 +59,148 @@ export function TransportView({ active }: TransportViewProps) {
   const [nodeLibraryCollapsed, setNodeLibraryCollapsed] = useState(false);
   const [gisViewerCollapsed, setGisViewerCollapsed] = useState(false);
   const [workflowFocused, setWorkflowFocused] = useState(false);
+  const [project, setProject] = useState(INITIAL_TRANSPORT_PROJECT);
+  const nextNodeIdRef = useRef(project.nodes.length);
+  const [dirty, setDirty] = useState(false);
+  const [savedProjects, setSavedProjects] = useState<SavedTransportProject[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [validation, setValidation] = useState<TransportValidationResult | null>(null);
+  const [projectStatus, setProjectStatus] = useState<string | null>(null);
+
+  function onNodesChange(changes: NodeChange<TransportWorkflowNode>[]) {
+    setProject((current) => ({ ...current, nodes: applyNodeChanges(changes, current.nodes) }));
+    if (changes.some((change) => change.type !== "select" && change.type !== "dimensions")) {
+      setDirty(true);
+      setValidation(null);
+    }
+  }
+
+  function onEdgesChange(changes: EdgeChange[]) {
+    setProject((current) => ({ ...current, edges: applyEdgeChanges(changes, current.edges) }));
+    if (changes.some((change) => change.type !== "select")) {
+      setDirty(true);
+      setValidation(null);
+    }
+  }
+
+  function onAddNode(transportType: string, position: { x: number; y: number }) {
+    const definition = ALL_TRANSPORT_NODE_TYPES.find((item) => item.transportType === transportType);
+    if (!definition) return;
+    nextNodeIdRef.current += 1;
+    const isDataNode = "dataType" in definition;
+    setProject((current) => ({
+      ...current,
+      nodes: [...current.nodes, {
+        id: `transport-${nextNodeIdRef.current}`,
+        type: "transport",
+        position,
+        data: {
+          label: definition.label,
+          transportType: definition.transportType,
+          category: isDataNode ? "data" : "model",
+          inputDataType: "inputDataType" in definition ? definition.inputDataType : undefined,
+          outputDataType: isDataNode ? definition.dataType : ("outputDataType" in definition ? definition.outputDataType : undefined),
+        },
+      }],
+    }));
+    setDirty(true);
+    setValidation(null);
+  }
+
+  function onConnect(connection: Connection) {
+    if (!connection.source || !connection.target || connection.source === connection.target) return;
+    setProject((current) => ({
+      ...current,
+      edges: current.edges.some((edge) => edge.source === connection.source && edge.target === connection.target)
+        ? current.edges
+        : addEdge({ ...connection, type: "smoothstep" }, current.edges),
+    }));
+    setDirty(true);
+    setValidation(null);
+  }
+
+  function resetNodeCounter(nodes: TransportWorkflowNode[]) {
+    nextNodeIdRef.current = nodes.reduce((maximum, node) => {
+      const match = /^transport-(\d+)$/.exec(node.id);
+      return Math.max(maximum, match ? Number(match[1]) : 0);
+    }, 0);
+  }
+
+  function newProject() {
+    if (dirty && !window.confirm("Start a new Transport project and discard unsaved changes?")) return;
+    const next = createEmptyTransportProject();
+    setProject(next);
+    resetNodeCounter(next.nodes);
+    setSelectedProjectId("");
+    setDirty(false);
+    setValidation(null);
+    setProjectStatus("New Transport project created.");
+  }
+
+  function saveProject() {
+    const name = project.metadata.name?.trim() ?? "";
+    if (!name) {
+      setProjectStatus("Enter a project name before saving.");
+      return;
+    }
+    const projectToSave = { ...project, metadata: { ...project.metadata, name, updatedAt: new Date().toISOString() } };
+    setProject(projectToSave);
+    setProjectStatus("Saving project…");
+    send({ type: "transport_project_save", name, project: projectToSave });
+  }
+
+  function openProject() {
+    if (!selectedProjectId) return;
+    if (dirty && !window.confirm("Open the selected project and discard unsaved changes?")) return;
+    setProjectStatus("Opening project…");
+    send({ type: "transport_project_load", id: selectedProjectId });
+  }
+
+  function runValidation(forRun = false) {
+    const result = validateTransportProject(project);
+    setValidation(result);
+    setProjectStatus(
+      forRun
+        ? result.valid
+          ? "Workflow is valid. Execution engine is the next backend milestone; no calculation was started."
+          : "Run blocked: fix the workflow errors below."
+        : result.valid
+          ? "Workflow validation passed."
+          : "Workflow validation failed.",
+    );
+  }
+
+  useEffect(() => {
+    const unsub = subscribe((msg) => {
+      if (msg.type === "transport_project_list") {
+        setSavedProjects(Array.isArray(msg.projects) ? msg.projects as SavedTransportProject[] : []);
+        if (msg.ok === false) setProjectStatus(`Could not list projects: ${String(msg.error ?? "unknown error")}`);
+      } else if (msg.type === "transport_project_saved") {
+        if (msg.ok === true && msg.project && typeof msg.project === "object") {
+          const summary = msg.project as SavedTransportProject;
+          setSelectedProjectId(summary.id);
+          setDirty(false);
+          setProjectStatus(`Saved ${summary.name}.`);
+          send({ type: "transport_project_list" });
+        } else {
+          setProjectStatus(`Save failed: ${String(msg.error ?? "unknown error")}`);
+        }
+      } else if (msg.type === "transport_project_loaded") {
+        const loaded = parseTransportProject(msg.project);
+        if (msg.ok === true && loaded) {
+          setProject(loaded);
+          resetNodeCounter(loaded.nodes);
+          setDirty(false);
+          setValidation(null);
+          setProjectStatus(`Opened ${loaded.metadata.name ?? "Transport project"}.`);
+        } else {
+          setProjectStatus(`Open failed: ${String(msg.error ?? "unsupported or invalid project format")}`);
+        }
+      }
+    });
+    send({ type: "transport_project_list" });
+    return unsub;
+  }, []);
 
   useEffect(() => {
     const workspace = workspaceRef.current;
@@ -189,24 +337,45 @@ export function TransportView({ active }: TransportViewProps) {
 
   return (
     <div
-      className="flex h-full flex-col gap-4 overflow-hidden p-4 sm:p-6"
-      style={{ background: "var(--bg-primary)" }}
+      className={`relative flex h-full flex-col gap-4 overflow-hidden p-4 sm:p-6 ${
+        active ? "" : "invisible pointer-events-none"
+      }`}
+      style={{
+        background: "var(--bg-primary)",
+        // Keep the component mounted for state preservation, but remove its
+        // entire render subtree from the compositor while another tab is
+        // active. React Flow owns absolute/SVG layers that can otherwise
+        // outlive an ancestor's visibility boundary in WebView2.
+        display: active ? "flex" : "none",
+        visibility: active ? "visible" : "hidden",
+        pointerEvents: active ? "auto" : "none",
+      }}
       aria-hidden={!active}
     >
-      <header>
-        <h1
-          className="text-lg font-semibold"
-          style={{ color: "var(--text-primary)" }}
-        >
-          Transport Model
-        </h1>
-        <p
-          className="mt-1 text-sm"
-          style={{ color: "var(--text-secondary)" }}
-        >
-          Transport modelling workspace
-        </p>
+      <header className="flex shrink-0 flex-col gap-3 xl:flex-row xl:items-start">
+        <div className="min-w-48 flex-1">
+          <h1 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>Transport Model</h1>
+          <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>Transport modelling workspace</p>
+        </div>
+        <TransportProjectToolbar
+          projectName={project.metadata.name ?? ""}
+          dirty={dirty}
+          projects={savedProjects}
+          selectedProjectId={selectedProjectId}
+          onProjectNameChange={(name) => {
+            setProject((current) => ({ ...current, metadata: { ...current.metadata, name } }));
+            setDirty(true);
+          }}
+          onSelectProject={setSelectedProjectId}
+          onNew={newProject}
+          onOpen={openProject}
+          onSave={saveProject}
+          onValidate={() => runValidation(false)}
+          onRun={() => runValidation(true)}
+        />
       </header>
+
+      <TransportValidationPanel result={validation} status={projectStatus} onClose={() => { setValidation(null); setProjectStatus(null); }} />
 
       <div
         ref={workspaceRef}
@@ -250,6 +419,12 @@ export function TransportView({ active }: TransportViewProps) {
           <WorkflowCanvas
             focused={workflowFocused}
             onToggleFocus={toggleWorkflowFocus}
+            nodes={project.nodes}
+            edges={project.edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onAddNode={onAddNode}
+            onConnect={onConnect}
           />
         </div>
         <div
