@@ -91,6 +91,14 @@ Modelling:
 
 `WorkflowCanvas` เป็น controlled component ที่อ่านและแก้ไข state ผ่าน props ไม่ได้เก็บ workflow แยกจาก Transport workspace อีกชุดหนึ่ง
 
+ข้อสังเกตสำคัญก่อนเริ่ม calculation engine:
+
+- schema v1 ยังเก็บ `Node`/`Edge` ของ React Flow โดยตรง
+- `transportType` ปัจจุบันยังเป็นชื่อแบบ `trip-generation` และ `data-csv` ไม่ใช่ stable namespaced action ID
+- node ยังมี input/output อย่างละหนึ่งชนิด จึงยังไม่พอสำหรับโมดูลจริงที่ต้องรับหลาย input
+
+ต้อง refactor เป็น engine-neutral schema v2 พร้อม migration จาก v1 ก่อนนำ model code เข้ามา รายละเอียดและ checklist อยู่ที่ [`TRANSPORT_ENGINE_ROADMAP.md`](./TRANSPORT_ENGINE_ROADMAP.md)
+
 สถาปัตยกรรมที่เตรียมไว้สำหรับระยะถัดไป:
 
 ```text
@@ -175,29 +183,29 @@ Start-Process `
 
 Branch ปัจจุบันคือ `transport-ui`
 
-ไฟล์ที่มีการเปลี่ยนแปลงใน working tree ณ เวลาจัดทำเอกสาร:
+ก่อนเริ่มอัปเดตเอกสารครั้งนี้ working tree สะอาดที่ commit `0bad0d7` (`update transport ui`)
 
-- `frontend/package.json`
-- `frontend/pnpm-lock.yaml`
-- `frontend/src/components/TransportView.tsx`
-- `frontend/src/components/transport/NodeLibrary.tsx`
-- `frontend/src/components/transport/WorkflowCanvas.tsx`
-- `frontend/src/components/transport/TransportNode.tsx`
-- `frontend/src/components/transport/TransportProjectToolbar.tsx`
-- `frontend/src/components/transport/TransportValidationPanel.tsx`
-- `frontend/src/components/transport/transportTypes.ts`
-- `frontend/src/components/transport/transportValidation.ts`
-- `crates/core/src/transport_project.rs`
-- `crates/core/src/ipc.rs`
-- `crates/core/src/lib.rs`
+การเปลี่ยนแปลงรอบนี้เป็นเอกสารเท่านั้น:
 
-ไฟล์เหล่านี้ยังไม่ได้ commit ในเอกสารฉบับนี้
+- แก้ไข `TRANSPORT_STATUS.md`
+- สร้าง `TRANSPORT_ENGINE_ROADMAP.md`
+
+ไม่มี source code, frontend, Rust หรือ backend file ถูกแก้ไขในงานบันทึก roadmap นี้
 
 ## งานถัดไปที่แนะนำ
 
-1. กำหนด parameter schema ของแต่ละ modelling node
-2. เพิ่ม backend execution contract (`started/progress/completed/failed`)
-3. พัฒนา calculation engine ทีละโมดูล
-4. เชื่อมผลลัพธ์เข้ากับ GIS Viewer
-5. เพิ่ม IPC/tool ให้ Chat อ่านและแก้ Transport Project
-6. เพิ่ม MCP หลัง project และ execution contract เสถียร
+Roadmap ฉบับเต็ม: [`TRANSPORT_ENGINE_ROADMAP.md`](./TRANSPORT_ENGINE_ROADMAP.md)
+
+ลำดับหลักที่ตกลงไว้:
+
+1. Refactor Transport Project เป็น engine-neutral schema v2
+2. เพิ่ม migration จาก schema v1 และรักษา project เดิม
+3. กำหนด stable action IDs, multi-port contract และ parameter schema
+4. สร้าง `transport-engine/` เป็น Python package
+5. กำหนด versioned JSON Lines runner protocol
+6. เพิ่ม Rust runner bridge และ execution IPC
+7. ทดสอบ end-to-end ด้วย stub engine
+8. นำ algorithm จริงเข้าทีละโมดูลพร้อม regression tests
+9. เชื่อม result artifacts กับ GIS Viewer
+10. เชื่อม Chat/Agent แล้วจึงเพิ่ม MCP
+11. ทำ binary packaging และ license verification ภายใน engine เมื่อ contract เสถียร
