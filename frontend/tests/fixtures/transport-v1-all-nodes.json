@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "metadata": { "name": "Legacy Bangkok model", "baseYear": 2025, "region": "Bangkok", "updatedAt": "2026-08-29T00:00:00Z" },
+  "nodes": [
+    { "id": "csv", "type": "transport", "position": { "x": 10, "y": 20 }, "selected": true, "data": { "label": "My survey", "transportType": "data-csv", "category": "data", "outputDataType": "CSV" } },
+    { "id": "shapefile", "type": "transport", "position": { "x": 10, "y": 120 }, "data": { "label": "Roads", "transportType": "data-shapefile", "category": "data" } },
+    { "id": "geojson", "type": "transport", "position": { "x": 10, "y": 220 }, "data": { "label": "Zones", "transportType": "data-geojson", "category": "data" } },
+    { "id": "parquet", "type": "transport", "position": { "x": 10, "y": 320 }, "data": { "label": "Demand", "transportType": "data-parquet", "category": "data" } },
+    { "id": "generation", "type": "transport", "position": { "x": 300, "y": 20 }, "data": { "label": "My Generation", "transportType": "trip-generation", "category": "model", "note": "Check survey", "details": "Peak hour only", "parameters": { "factor": 1.2, "enabled": true } } },
+    { "id": "distribution", "type": "transport", "position": { "x": 600, "y": 20 }, "data": { "label": "Distribution", "transportType": "trip-distribution", "category": "model" } },
+    { "id": "modal", "type": "transport", "position": { "x": 900, "y": 20 }, "data": { "label": "Modal Split", "transportType": "modal-split", "category": "model" } },
+    { "id": "traffic", "type": "transport", "position": { "x": 1200, "y": 20 }, "data": { "label": "Assignment", "transportType": "traffic-assignment", "category": "model" } },
+    { "id": "transit", "type": "transport", "position": { "x": 600, "y": 320 }, "data": { "label": "Transit", "transportType": "transit-assignment", "category": "model" } },
+    { "id": "skim", "type": "transport", "position": { "x": 600, "y": 220 }, "data": { "label": "Skim", "transportType": "skim", "category": "model" } }
+  ],
+  "edges": [
+    { "id": "e1", "source": "csv", "target": "generation", "sourceHandle": null, "targetHandle": null },
+    { "id": "e2", "source": "generation", "target": "distribution" },
+    { "id": "e3", "source": "distribution", "target": "modal" },
+    { "id": "e4", "source": "modal", "target": "traffic" },
+    { "id": "e5", "source": "shapefile", "target": "transit" },
+    { "id": "e6", "source": "geojson", "target": "skim" }
+  ],
+  "viewport": { "x": 15, "y": -20, "zoom": 0.8 }
+}

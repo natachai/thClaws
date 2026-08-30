@@ -1,211 +1,397 @@
 # THClaws Development Status
 
-อัปเดตล่าสุด: 30 สิงหาคม 2026  
+อัปเดตล่าสุด: 30 สิงหาคม 2026
+
 Branch: `transport-ui`
 
-## ภาพรวม
+ฐานก่อนงาน foundation ชุดที่ 1: commit `69e33e9`
 
-THClaws baseline สำหรับ Windows build และเปิดใช้งานผ่าน desktop GUI ได้แล้ว โดยใช้ Rust desktop application และ frontend React/TypeScript ที่ถูกฝังเข้าไปใน binary ตอน build GUI
+## สรุป iteration ล่าสุด — Result Viewer
 
-Transport workspace ถูกเพิ่มเป็น tab แยกจาก Chat ภายในหน้าต่าง THClaws เดียวกัน
+เปลี่ยน panel ขวาจาก GIS Viewer เป็น **Result Viewer** ที่มี GIS / Data / Chart โดยใช้ dataset เดียวกันทั้งสามมุมมอง ไม่ผูกกับ node ชนิดใดโดยเฉพาะ
 
-ล่าสุดเพิ่มหมวด `Data` ใน Node Library เพื่อแยกแหล่งข้อมูลออกจาก modelling components
+Source, TypeScript/lint, tests 38/38, frontend/desktop builds, browser checks และ native GUI launch ของ iteration นี้ผ่านแล้ว ยังเหลือ manual mouse-drag acceptance ตามตาราง Verification ด้านล่าง **ไม่ใช้ผล GUI/build จากงานชุดที่ 1 มาแทนผลรอบใหม่**
 
-## สถานะ workspace ปัจจุบัน
+## สรุปงานชุดที่ 1
+
+กำลังส่งมอบ Transport Project foundation: schema v2, migration v1, named input/output ports, Create new data, รายละเอียดแต่ละ block และ safe Save/Open โดยคง Chat กับ Transport เป็นคนละ workspace
+
+**หลักฐานงานชุดที่ 1:** implementation, automated checks, frontend/desktop build, browser end-to-end checks และ native GUI launch ของงานชุดที่ 1 ผ่านแล้ว ยังเหลือ manual acceptance ของ mouse drag ตามส่วน Verification งานชุดที่ 1 ด้านล่าง จึงยังไม่ปิด verification ทั้ง milestone
+
+ยังไม่มี calculation engine: ปุ่ม **Run Workflow** ตรวจโครงสร้างเท่านั้น ไม่ได้คำนวณหรือสร้างผลลัพธ์แบบจำลองจริง
+
+## Workspace และ UI ปัจจุบัน
 
 ### Chat
 
-- ยังคงเป็น Chat UI เดิมของ THClaws
-- ไม่มี Transport workflow, canvas หรือ GIS แสดงอยู่ใน Chat
-- Transport component ยังคง mount เพื่อรักษา state แต่ถูกซ่อนและปิด interaction เมื่อไม่ได้อยู่ที่ Transport
+- เป็น Chat UI เดิม ไม่ได้เพิ่ม Transport panel เข้า Chat
+- Transport root ซ่อนทั้งภาพและ interaction เมื่อ inactive โดยเก็บ component/project state ไว้
+- dialog ของ Transport อยู่ภายใน Transport root ไม่ใช้ portal หรือ fixed/global overlay
+- Chat/Agent ยังไม่สามารถอ่าน แก้ หรือรัน Transport Project ผ่าน tools ได้
 
 ### Transport
 
-ประกอบด้วยสามส่วน:
+ยังมีสาม panel ใน layout เดิม: Node Library, Workflow Canvas และ Result Viewer ซึ่งมี GIS / Data / Chart tabs:
 
-1. Node Library
-2. Workflow Canvas
-3. GIS Viewer placeholder
+- splitter ปรับขนาด panel, collapse/restore, workflow focus และ Result Viewer maximize/restore
+- canvas รองรับ drag/connect/delete, zoom และ fit workflow
+- model nodes: Trip Generation, Trip Distribution, Modal Split, Traffic Assignment, Transit Assignment, Skim
+- ไม่เพิ่ม Input Data แบบเดิมกลับมา
 
-Node ที่มีอยู่:
+#### สร้าง Data block
 
-Data:
+1. Node Library หมวด Data → **Create new data**
+2. เลือก **Import data from source**
+3. เลือก source file ใน workspace ปัจจุบัน
+4. เลือก format: Shapefile, CSV, GeoJSON หรือ Parquet
+5. เลือก modelling data type และตั้งชื่อ data block
+6. กด **Create data block**
 
-- Shapefile
-- CSV
-- GeoJSON
-- Parquet
+ข้อจำกัดที่ตั้งใจไว้ใน milestone นี้:
 
-Modelling:
+- เก็บ **source reference เท่านั้น**: absolute file path, format และ logical data type
+- ยังไม่ parse/copy/import เนื้อหาข้อมูล ไม่ตรวจคอลัมน์หรือ CRS และไม่คำนวณ
+- browser จำกัดขอบเขตตาม workspace sandbox; ไม่ใช่ file picker สำหรับทุก directory ในเครื่อง
+- ไม่รองรับ URL, database หรือ cloud source ในรอบนี้
+- Shapefile เลือก `.shp`; ต้องเก็บ companion files ไว้ด้วยกัน แต่ยังไม่ตรวจ `.dbf`/`.shx` ให้
+- logical data type เป็นข้อมูลที่ผู้ใช้ระบุ ไม่ใช่ผลตรวจเนื้อหาไฟล์
 
-- Trip Generation
-- Trip Distribution
-- Modal Split
-- Traffic Assignment
-- Transit Assignment
-- Skim
+#### Inputs, outputs และรายละเอียด block
 
-ความสามารถที่มีแล้ว:
+- แต่ละ block มี **Block details** สำหรับแก้ชื่อ, Note และ Details
+- node มีหลาย named input/output ports ตามชนิดโมดูล
+- ตั้งชื่อ output ได้; block อื่นเลือก output นี้เป็น input ผ่าน dropdown หรือเชื่อม handles บน canvas
+- dropdown เสนอเฉพาะ output จาก block อื่นที่ data type เข้ากันได้
+- input หนึ่ง port รับหนึ่ง binding; output เดียวใช้ร่วมกันได้หลาย downstream blocks
+- การเชื่อมใหม่ป้องกัน self-connection, incompatible ports และ cycle
+- connection เก่าที่ผิดชนิดหรือแปลง port ไม่ได้ยังถูกเก็บไว้และแสดงปัญหา ไม่ลบ/เดาให้เงียบ ๆ
+- output ของ model เป็น **planned reference** ยังไม่ใช่ผลคำนวณ
+- เปลี่ยนชื่อ/note/details/output name แล้วต้องกด Save เพื่อเขียน project ลง disk
 
-- แสดงหมวด Data และ Modelling แยกกันใน Node Library
-- แสดงชนิดข้อมูล input/output บน workflow node และ handle
-- ลาก node จาก Node Library ไปยัง Workflow Canvas
-- เชื่อม node ด้วย handles
-- ลบ node และ edge
-- ปรับ zoom, reset zoom และ fit workflow
-- ปรับขนาดสาม panel ด้วย splitter
-- ย่อ/ขยาย Node Library และ GIS Viewer
-- ขยาย GIS Viewer แบบ maximize และ restore ด้วย Escape
-- รักษา workflow state เมื่อสลับ tab
-- สร้าง project ใหม่ด้วยปุ่ม New
-- บันทึกและเปิด project JSON ด้วย Save/Open
-- เก็บ project ใต้ `.thclaws/transport/projects/`
-- ตรวจโครงสร้าง workflow, data source, missing inputs, broken edges, cycles และ data-type mismatch
-- ปุ่ม Run Workflow ทำ validation และบล็อก workflow ที่มี error
+## Result Viewer architecture
 
-ยังไม่มี:
+- `TransportView` เป็นเจ้าของ presentation state ผ่าน `useResultViewer`: current dataset และ selected view ซึ่งเริ่มต้นที่ `gis`
+- `ResultViewer` รับ dataset/view ผ่าน props; GISView, DataView และ ChartView ใช้ dataset object เดียวกัน ไม่มี fetch หรือ demo state ของตัวเอง
+- ทุก view ยังคง mounted เมื่อสลับแท็บ, collapse หรือ maximize; inactive view ใช้ `display: none` และ `inert` จึงไม่รับ interaction
+- `openResult(dataset, view)` เปลี่ยน dataset/view และเปิดเผย panel ได้ เป็นจุดเชื่อมสำหรับ future node actions โดยไม่ผูก Result Viewer กับ Trip Generation หรือ node เฉพาะชนิด
+- output dataset แยกจาก `TransportProject` JSON: demo/selected result ไม่ถูก Save ลง workflow และไม่ได้อ้างว่ามี model run แล้ว
+- compact maximize จับ scroll position **ก่อนเปลี่ยน layout/state** เพื่อไม่ให้ grid reflow clamp ค่าไปก่อน, reset scroll เพื่อแสดง panel เต็มพื้นที่ แล้ว restore scroll เมื่อออกจาก maximize; panel ที่ถูกบังเป็น `inert`
+- Result Viewer หยุดการส่งต่อ Delete/Backspace เพื่อไม่ให้ keyboard handler ของ canvas ลบ node ที่เลือกอยู่ขณะผู้ใช้โฟกัสอ่านผลใน Data/Result Viewer โดยไม่เปลี่ยนพฤติกรรม Chat
+- ใช้ theme เดิม ไม่เพิ่ม design system, chart dependency หรือ backend
 
-- Transport calculation engine
-- ผลลัพธ์การคำนวณ
-- MapLibre หรือ QGIS
-- MCP integration
-- การให้ Chat สร้างหรือแก้ node โดยตรง
+### Shared result contract
 
-## Architecture ปัจจุบัน
+`TransportResultDataset` รองรับ:
 
-ตอนนี้ `TransportView` เป็นเจ้าของ `TransportProject` state กลาง ซึ่งประกอบด้วย:
+- `id`, `name`, `origin: "demo" | "model"`
+- optional `sourceNodeId` / `sourcePortId` สำหรับเชื่อมผลจริงในอนาคต
+- `fields`: stable field ID, label, string/number/boolean type และ optional unit
+- `rows`: stable row ID และ `values` ที่ใช้ field IDs เป็น keys
+- optional GeoJSON `geometry` พร้อม `rowIdProperty` สำหรับเชื่อม feature กับ row ID และ optional CRS
 
-```ts
+geometry contract ยังไม่ใช่ GIS renderer หรือ GeoJSON validation ที่ทำงานแล้ว ไม่มีการคำนวณผลใน contract นี้
+
+### สิ่งที่แต่ละ view แสดงตอนนี้
+
+- **GIS:** placeholder เดิมสำหรับ road networks, zones, skim results และ assignment outputs; ยังไม่มี MapLibre/QGIS
+- **Data:** generic read-only table สร้าง columns จาก fields และ rows จาก shared dataset ไม่ hardcode node/TAZ schema ภายใน renderer; รองรับ null/empty state
+- **Chart:** placeholder เท่านั้น มีคำอธิบาย Bar/Line/Scatter/Histogram แบบไม่ใช่ปุ่ม ไม่มี chart ที่ render หรือการคำนวณ เนื่องจากยังไม่มี chart library ใน dependencies และรอบนี้ไม่เพิ่ม dependency
+
+ไม่มี CSV/Excel loading, file parsing, table editing, export หรือผลคำนวณจริงใน Result Viewer รอบนี้ แยกจาก Create new data ซึ่งเก็บเพียง source reference อยู่แล้ว
+
+initial demo ชื่อ `Trip generation by zone (demo)` แยกไว้ใน `demoTransportResult.ts` และติดป้าย demo ชัดเจน ไม่สร้าง source node หรือ geometry ปลอม:
+
+| TAZ | Population | Employment | Production | Attraction |
+| --- | ---: | ---: | ---: | ---: |
+| 001 | 12,430 | 8,240 | 4,821 | 3,921 |
+| 002 | 9,821 | 11,302 | 3,824 | 5,127 |
+| 003 | 18,231 | 7,921 | 6,120 | 4,011 |
+
+ข้อมูลเป็นตัวอย่างที่ให้มา ไม่ใช่การอ่านไฟล์หรือ output ของ Run Workflow; TAZ เก็บเป็น string เพื่อคงเลขศูนย์นำหน้า และ row IDs เป็น `taz-001`, `taz-002`, `taz-003`
+
+## Project architecture
+
+`TransportView` ประกอบ UI และใช้ `useTransportProject` ดูแล project state, editing, persistence IPC และ validation กลาง
+
+schema v2 แยก engine data ออกจาก React Flow:
+
+```text
 {
-  schemaVersion: 1,
-  nodes: TransportWorkflowNode[],
-  edges: TransportWorkflowEdge[],
-  metadata: {
-    name?: string,
-    baseYear?: number,
-    region?: string,
-    updatedAt?: string
+  schemaVersion: 2,
+  metadata: { name, baseYear?, region?, updatedAt? },
+  workflow: {
+    nodes: [{ id, actionId, label, note, details, parameters, source?, outputNames }],
+    edges: [{ id, source: { nodeId, portId }, target: { nodeId, portId } }]
+  },
+  ui: {
+    nodes: { [nodeId]: { position: { x, y } } },
+    viewport?: { x, y, zoom }
   }
 }
 ```
 
-`WorkflowCanvas` เป็น controlled component ที่อ่านและแก้ไข state ผ่าน props ไม่ได้เก็บ workflow แยกจาก Transport workspace อีกชุดหนึ่ง
+- `transportTypes.ts` เป็น engine-neutral contract ไม่ import React/XYFlow types
+- `transportFlow.ts` เป็น adapter ระหว่าง project schema กับ XYFlow
+- ใช้ stable action IDs เช่น `transport.trip_generation`, `transport.traffic_assignment`, `data.csv`
+- `parameters` เป็น JSON object สำหรับรองรับอนาคต; **parameter schema และ algorithm contracts ยังไม่ใช่ข้อกำหนด final ของ engine**
+- input/output registry ปัจจุบันเป็น structural editor contract ไม่ใช่คำรับรองว่า workflow พร้อมคำนวณจริง
 
-ข้อสังเกตสำคัญก่อนเริ่ม calculation engine:
+source reference ตัวอย่าง:
 
-- schema v1 ยังเก็บ `Node`/`Edge` ของ React Flow โดยตรง
-- `transportType` ปัจจุบันยังเป็นชื่อแบบ `trip-generation` และ `data-csv` ไม่ใช่ stable namespaced action ID
-- node ยังมี input/output อย่างละหนึ่งชนิด จึงยังไม่พอสำหรับโมดูลจริงที่ต้องรับหลาย input
-
-ต้อง refactor เป็น engine-neutral schema v2 พร้อม migration จาก v1 ก่อนนำ model code เข้ามา รายละเอียดและ checklist อยู่ที่ [`TRANSPORT_ENGINE_ROADMAP.md`](./TRANSPORT_ENGINE_ROADMAP.md)
-
-สถาปัตยกรรมที่เตรียมไว้สำหรับระยะถัดไป:
-
-```text
-Chat / Agent
-     ↕ IPC หรือ Transport tools
-Transport Project State
-     ↕
-Transport UI (Node Library / Workflow / GIS)
-     ↕
-Backend calculation engine
+```json
+{
+  "kind": "file",
+  "path": "C:/Users/natachai/Dropbox/thClaws-transport-dev/thClaws/data/socioeconomic.csv",
+  "format": "csv",
+  "dataType": "table.socioeconomic"
+}
 ```
 
-ขณะนี้ส่วน Chat และ backend ยังไม่ได้เชื่อมกับ `TransportProject` ดังนั้นข้อความใน Chat ยังไม่สามารถเพิ่มหรือรัน Transport node ได้จริง
+path ในตัวอย่างเป็นตัวอย่างเท่านั้น ต้องเลือกไฟล์จริงใน workspace ของผู้ใช้
 
-## ไฟล์ Transport หลัก
+## Migration และการบันทึกอย่างปลอดภัย
 
-- `frontend/src/components/TransportView.tsx` — layout, panel sizing, maximize state และ project state
-- `frontend/src/components/transport/NodeLibrary.tsx` — รายการ node และ drag source
-- `frontend/src/components/transport/WorkflowCanvas.tsx` — React Flow canvas และ workflow editing
-- `frontend/src/components/transport/GISViewer.tsx` — GIS placeholder
-- `frontend/src/components/transport/PanelSplitter.tsx` — draggable splitter
-- `frontend/src/components/transport/TransportNode.tsx` — custom workflow node rendering
-- `frontend/src/components/transport/TransportProjectToolbar.tsx` — New/Open/Save/Validate/Run controls
-- `frontend/src/components/transport/TransportValidationPanel.tsx` — validation result panel
-- `frontend/src/components/transport/transportTypes.ts` — node types และ Transport Project model
-- `frontend/src/components/transport/transportValidation.ts` — workflow validation rules
-- `frontend/src/App.tsx` — tab union, tab registration และ lifecycle mounting
-- `crates/core/src/transport_project.rs` — workspace-local JSON persistence
-- `crates/core/src/ipc.rs` — Transport project list/save/load IPC
+- อ่าน schema v1 แล้ว migrate เป็น v2 **ใน memory**; ไม่แก้ไฟล์ต้นฉบับจากการ Open
+- ย้ายตำแหน่ง node ไป `ui.nodes`, แปลง legacy IDs เป็น namespaced action IDs
+- แปลง legacy handles เฉพาะเมื่อระบุ port ได้ชัดเจน; ข้อมูลกำกวมหรือ unknown action/port ถูกเก็บพร้อมคำเตือนสำหรับซ่อม
+- Save ครั้งแรกหลัง migrate สร้าง **v2 copy ใหม่** โดยเก็บไฟล์ v1 เดิมไว้
+- Save project เดิมใช้ stable file ID ไม่เอาชื่อที่แสดงไปเดาว่าจะเขียนทับไฟล์ใด
+- **Save As Copy** สร้าง ID ใหม่ แม้ชื่อ project เหมือนกัน
+- ก่อน update ไฟล์เดิม สร้าง backup ของ bytes เดิมใต้ `.thclaws/transport/projects/backups/`
+- เขียนไฟล์ชั่วคราวใน directory เดียวกัน, flush แล้ว replace; ไม่ลบไฟล์เก่าก่อนเขียนใหม่
+- new save ใช้ no-clobber เพื่อไม่เขียนทับไฟล์ชื่อชน
+- ถ้า backup หรือ replacement ล้มเหลว ให้รายงาน error และเก็บไฟล์เดิมไว้
+- รองรับ request IDs เพื่อแยก Transport IPC ออกจาก Files และไม่ให้ response เก่าทับ edits ใหม่
 
-Rust/backend รองรับเฉพาะการบันทึกและโหลด Transport Project แล้ว แต่ยังไม่มี calculation engine
+project files ยังอยู่ใต้ `.thclaws/transport/projects/` ใน workspace ปัจจุบัน
 
-## การตรวจสอบล่าสุด
+## Backend เชื่อมอะไรแล้วบ้าง
 
-ผ่านแล้ว:
+เชื่อมแล้ว:
 
-- TypeScript project check
-- Transport-scoped ESLint
-- Frontend production build
-- Rust desktop GUI release build
-- Save/Open project แบบ end-to-end ใน temporary workspace
-- validation และ Run-blocked state สำหรับ workflow ที่ไม่สมบูรณ์
-- เปิด development GUI บน Windows
-- สลับ Chat → Transport → Chat
-- สลับ Files → Transport → Files
-- สลับ Transport → Chat → Transport
+- `transport_project_list`, `transport_project_save`, `transport_project_load`
+- `transport_data_sources` สำหรับ browse source file references ภายใต้ sandbox
 
-## คำสั่ง Build
+ยังไม่เชื่อม:
 
-จาก root ของ repository:
+- calculation engine / Python runner / Rust execution bridge
+- run/progress/result events
+- Chat control, GIS results, MapLibre/QGIS, MCP
+
+ดังนั้นคำว่า “backend ยังไม่เชื่อม” ไม่ถูกต้องทั้งหมด: persistence และ source browser เชื่อม Rust แล้ว แต่ **calculation engine และ Chat tools ยังไม่มี**
+
+## ไฟล์หลัก
+
+- `frontend/src/components/TransportView.tsx` — composition, layout และ scoped dialogs
+- `frontend/src/components/transport/ResultViewer.tsx` — common result header, controlled GIS/Data/Chart tabs และ mounted-view lifecycle
+- `frontend/src/components/transport/GISView.tsx` — spatial representation placeholder
+- `frontend/src/components/transport/DataView.tsx` — generic read-only result table
+- `frontend/src/components/transport/ChartView.tsx` — chart placeholder โดยไม่เพิ่ม chart dependency
+- `frontend/src/components/transport/transportResultTypes.ts` — shared result dataset contract และ display formatter
+- `frontend/src/components/transport/demoTransportResult.ts` — explicit demo dataset แยกจาก workflow
+- `frontend/src/components/transport/useResultViewer.ts` — presentation reducer และ `openResult(dataset, view)`
+- `frontend/src/components/transport/useTransportProject.ts` — project editing/state และ persistence IPC
+- `frontend/src/components/transport/transportConfirm.ts` — ยืนยันก่อนทิ้ง unsaved changes ผ่าน native desktop/browser ตามแพลตฟอร์ม
+- `frontend/src/components/transport/NodeLibrary.tsx` — Create new data และ modelling components
+- `frontend/src/components/transport/CreateDataDialog.tsx` — source reference wizard
+- `frontend/src/components/transport/TransportNodeDetails.tsx` — block notes/details, named outputs และ input bindings
+- `frontend/src/components/transport/WorkflowCanvas.tsx` — controlled XYFlow canvas
+- `frontend/src/components/transport/TransportNode.tsx` — block rendering และ named handles
+- `frontend/src/components/transport/transportTypes.ts` — schema v2 และ structural port registry
+- `frontend/src/components/transport/transportProject.ts` — parser และ legacy migration
+- `frontend/src/components/transport/transportFlow.ts` — XYFlow adapter
+- `frontend/src/components/transport/transportValidation.ts` — structural validation
+- `frontend/src/components/transport/TransportProjectToolbar.tsx` — New/Open/Save/Save As Copy/Validate/Run
+- `crates/core/src/transport_project.rs` — loss-resistant workspace JSON persistence
+- `crates/core/tests/transport_project.rs` — Windows-compatible dedicated persistence tests
+- `crates/core/src/ipc.rs` — project และ source-browser IPC
+
+## ขอบเขตไฟล์ที่เปลี่ยนใน Result Viewer iteration
+
+สร้าง source files 7 ไฟล์ใต้ `frontend/src/components/transport/`: `ResultViewer.tsx`, `GISView.tsx`, `DataView.tsx`, `ChartView.tsx`, `transportResultTypes.ts`, `demoTransportResult.ts`, `useResultViewer.ts`
+
+สร้าง tests 2 ไฟล์: `frontend/tests/transportResults.test.ts`, `frontend/tests/transportResultState.test.ts`
+
+แก้ไข `frontend/src/components/TransportView.tsx` และเอกสาร `TRANSPORT_STATUS.md`, `TRANSPORT_ENGINE_ROADMAP.md`; นำ `frontend/src/components/transport/GISViewer.tsx` เดิมออกเพราะแยกหน้าที่เป็น ResultViewer + GISView แล้ว ไม่ได้เอา GIS representation ออก
+
+เทียบกับจุดเริ่ม Result Viewer iteration: **ไม่มี backend, App.tsx, NodeLibrary.tsx, WorkflowCanvas.tsx หรือ package.json เปลี่ยนเพิ่ม** โดยตรวจ hashes ไว้ ทั้งนี้ Rust persistence/source-browser changes ของงานชุดที่ 1 ยังคงอยู่ ไม่ได้ลบหรือ revert
+
+## Verification — Result Viewer iteration ล่าสุด
+
+| รายการ | สถานะ iteration นี้ |
+| --- | --- |
+| Transport tests: `npm run test:transport` | ผ่าน 38/38: ชุดเดิม 28 และ result dataset/state ใหม่ 10 |
+| TypeScript project check | ผ่าน |
+| Transport-scoped ESLint | ผ่าน |
+| Frontend production build | ผ่าน; 2,590 modules, dist 4,117.65 kB / gzip 1,590.35 kB |
+| Desktop GUI release build | ผ่านใน 2 นาที 04 วินาที ด้วย temporary target directory; executable คัดลอกกลับ repository และ SHA256 ตรงกัน |
+| GIS/Data/Chart switching และ shared-dataset display | ผ่านใน browser จาก binary รอบนี้: ทั้งสาม views mounted โดยมองเห็นครั้งละหนึ่ง view |
+| Default GIS / keyboard tabs / preserved view state | ผ่านใน browser รวม Home key และ Data scroll retention |
+| Collapse/maximize/Escape/keyboard splitters และ compact scroll restore | ผ่านใน browser ตามรายละเอียดด้านล่าง; ไม่ใช่ mouse-drag verification |
+| Chat/Files isolation และ inactive Result Viewer interaction | ผ่านใน browser รวม Delete/Backspace ขณะโฟกัส Data ไม่ลบ selected canvas node |
+| Browser console | ไม่พบ warnings/errors ระหว่างชุดตรวจ Result Viewer |
+| Native development GUI launch รอบ Result Viewer | ผ่าน: repository executable, PID 38024, Exited=False, window title `thClaws` หลังเปิด 5 วินาที; ไม่มี startup panic ใน log ที่ตรวจ |
+| Manual mouse drag ของ workspace | ยังไม่ยืนยันจากงานชุดที่ 1 และยังไม่ถือว่าผ่านใน iteration นี้ |
+
+### Result Viewer browser evidence — binary รอบใหม่
+
+ทดสอบ binary เดียวกับ desktop build ผ่าน `--serve --port 18766` ใน isolated workspace `target/result-viewer-e2e`:
+
+- เริ่มที่ GIS, Data แสดงข้อมูลตัวอย่างตรงทั้ง 3 rows / 5 fields แบบ read-only, Chart เป็น placeholder ตามขอบเขต
+- GIS/Data/Chart ทั้งสาม panels คงอยู่ใน DOM แต่เห็นครั้งละหนึ่ง panel; เปลี่ยน tabs แล้ว Data scroll `top=70`, `left=50` คงเดิม
+- เลือก canvas node แล้วโฟกัส Data: กด Delete และ Backspace node ยังอยู่; keyboard tab navigation รวม Home ทำงาน
+- keyboard resize ผ่านทั้งสอง splitters; Result width เปลี่ยนจาก `303.1875` เป็น `335.203125` px และกลับมาเท่ากับ `335.203125` px หลัง maximize/restore ใน GIS, Data และ Chart; maximize กว้าง `1040` px ใน viewport ที่ตรวจ
+- collapse → maximize Chart → Escape กลับสู่ collapsed state; expand อีกครั้งยังเป็น Chart และเก็บ width เดิม
+- workflow focus → Expand Result คืน Node Library และ layout ที่เกี่ยวข้อง
+- สลับ Chat/Files/Transport หลายครั้ง: ไม่มี Result Viewer, canvas หรือ result table ปรากฏใน Chat/Files
+- compact viewport 900px มี document width 900px; Result maximize เต็มพื้นที่ `660 × 450` px และ reset scroll เป็น 0 เมื่อ maximize
+- compact restore กลับใกล้ scroll เดิม: `374 → 370` px **ไม่อ้างว่า restore pixel-exact**; สาเหตุของส่วนต่างยังไม่ยืนยัน อาจเกี่ยวกับ layout/focus clamping
+- หน้าต่างสั้น `1280 × 480` px: Result maximize สูง `294` px เท่ากับ workspace height 294px และ document height ยัง 480px
+- browser console ไม่พบ warning/error ในรอบตรวจนี้
+
+pointer-drag call คืนค่าแต่ divider ไม่เปลี่ยนตำแหน่ง จึง **ยังไม่ยืนยัน mouse resize/drag** และยังสรุปไม่ได้ว่าเป็น app bug ต้องตรวจด้วยเมาส์ใน native GUI ต่อ โดยไม่ใช้ผล keyboard resize มาแทน
+
+SHA256 ของ release executable รอบ Result Viewer หลังคัดลอกจาก temporary target กลับ `target/release/thclaws.exe`: `97C5B7B9DE00C823D5BE2F2AA9C3ECA662BEE921CE7F085B5104858F4A748AD2` โดยต้นทางและปลายทางตรงกัน
+
+### Native GUI — Result Viewer build ล่าสุด
+
+เปิดเฉพาะ development executable ใน repository และยืนยัน PID `38024`, `Exited=False`, window title `thClaws` หลัง 5 วินาที ไม่ได้ install หรือ overwrite installation เดิม
+
+คำสั่งเปิดที่ใช้ โดยตั้ง `THCLAWS_GUI_DETACHED=1` เฉพาะตอน launch เพื่อใช้ process ตรงพร้อมเก็บ logs แล้วคืน environment ของ shell ใน `finally`:
 
 ```powershell
-cd C:\Users\natachai\Dropbox\thClaws-transport-dev\thClaws
-cd frontend
-npm run build
-cd ..
-& 'C:\Users\natachai\.cargo\bin\cargo.exe' build --release --features gui --bin thclaws
+$previousGuiDetached = $env:THCLAWS_GUI_DETACHED
+try {
+  $env:THCLAWS_GUI_DETACHED = '1'
+  Start-Process `
+    -FilePath 'C:\Users\natachai\Dropbox\thClaws-transport-dev\thClaws\target\release\thclaws.exe' `
+    -ArgumentList '--gui' `
+    -WorkingDirectory 'C:\Users\natachai\Dropbox\thClaws-transport-dev\thClaws' `
+    -WindowStyle Normal `
+    -RedirectStandardOutput 'C:\Users\natachai\Dropbox\thClaws-transport-dev\thClaws\target\result-viewer-e2e\gui.stdout.log' `
+    -RedirectStandardError 'C:\Users\natachai\Dropbox\thClaws-transport-dev\thClaws\target\result-viewer-e2e\gui.stderr.log' `
+    -PassThru
+} finally {
+  $env:THCLAWS_GUI_DETACHED = $previousGuiDetached
+}
 ```
 
-## คำสั่งเปิด Development GUI
+startup ยังมีคำเตือนเดิมเรื่อง installed executable อีกแห่งบน PATH และการข้าม corrupt lines ใน session history เดิม ไม่ได้แก้/ล้างข้อมูลเหล่านั้น และไม่พบ panic ใน log ที่ตรวจ
 
-ใช้ binary ใน repository target directory เพื่อไม่แตะต้อง THClaws ที่ติดตั้งอยู่เดิม:
+ปิดเฉพาะ test server PID `38252` หลังตรวจ path และ command line ว่าตรงกับ development executable `--serve --port 18766`; ไม่หยุด installation เดิม และเปิด native development GUI ไว้ให้ตรวจด้วยเมาส์ต่อ การ launch สำเร็จไม่เท่ากับผ่าน manual mouse acceptance
+
+## Verification — หลักฐานงานชุดที่ 1 ก่อน Result Viewer
+
+แยกสถานะ implementation ออกจาก verification ให้ชัดเจน:
+
+| รายการ | ผลที่ยืนยันในงานชุดที่ 1 |
+| --- | --- |
+| CreateDataDialog / TransportNodeDetails scoped ESLint | ผ่าน |
+| Dedicated Rust persistence suite: `cargo test --features gui --test transport_project` | ผ่าน 8/8; ไม่ใช่ full Rust unit suite |
+| Project/migration/port/validation fixtures: `npm run test:transport` | ผ่าน 28/28 รวม duplicate-ID guards |
+| TypeScript project check / Transport-scoped lint ทั้งชุด | ผ่าน |
+| Frontend production build | ผ่าน; 2,584 modules |
+| Desktop GUI release build | ผ่านด้วย temporary target directory; คัดลอก executable กลับ repository และตรวจ SHA256 ตรงกัน |
+| Create data / details / bindings / Save/Open / migration-copy | ผ่านใน browser ผ่าน `--serve` ของ binary เดียวกัน; รายละเอียดด้านล่าง |
+| Repeated Chat/Files switching และ no-Transport-leak regression | ผ่านใน browser; nodes/edges ที่มองเห็นใน inactive tabs เท่ากับศูนย์ |
+| GIS maximize / Escape restore | ผ่านใน browser รวม screenshot ตรวจพื้นที่ maximize |
+| Splitter resize ด้วย keyboard | ผ่านทั้งสอง splitters ใน browser |
+| Compact viewport 900px | ผ่าน; document width เท่ากับ 900px และซ่อน splitters |
+| Mouse drag: nodes / splitters | ยังไม่ยืนยัน; ต้อง manual check ใน native GUI |
+| Run บน valid graph | แสดงชัดว่า engine ยังไม่ implement และไม่เริ่มคำนวณ |
+| Browser console | ไม่พบ warnings/errors ระหว่างชุดทดสอบ |
+| Native development GUI launch ของ binary รอบนี้ | เปิดสำเร็จ: process จาก repository มีหน้าต่าง `thClaws`; ยังไม่เท่ากับ manual mouse-drag acceptance |
+
+### Browser end-to-end — binary งานชุดที่ 1
+
+ทดสอบ `--serve` จาก executable เดียวกับ desktop build ใน isolated workspace `target/transport-ui-e2e` ไม่ใช้ project งานจริง:
+
+- Create new data จาก CSV source reference, ตั้งชื่อ block, กรอก Note ภาษาไทยและ Details ภาษาอังกฤษ แล้วเปิดกลับมาตรวจครบ
+- ตั้งชื่อ output และเลือก input bindings: Data → Trip Generation และ output ของ Generation สอง ports แยกไปสอง inputs ของ Distribution รวม 3 nodes / 3 edges
+- Save ใหม่, Save update พร้อม backup, Save As Copy ได้ ID ใหม่, Open คืน names/notes/details/connections และ viewport
+- เปิด v1 `Legacy-Review`, migrate แล้ว Save เป็น v2 copy ใหม่ที่มี 2 nodes / 1 edge; SHA256 ของไฟล์ v1 ต้นฉบับก่อนและหลังเท่ากัน: `1461FC30B6B73A4A20ABF43E8F1C51203C89D6215A87100316CFA90997DAE452`
+- สลับ Chat/Files/Transport ซ้ำ: ไม่มี Transport nodes/edges ปรากฏขณะ inactive, modal state คงอยู่เมื่อกลับ Transport และกด Delete ใน Chat ไม่เปลี่ยน workflow
+- GIS maximize แสดงครอบคลุม workspace และ Escape restore ได้
+- resize splitters ด้วย keyboard ผ่านทั้งสองฝั่ง และตรวจ compact viewport โดยไม่มีแนวนอนล้น
+
+**ข้อจำกัดการยืนยัน:** browser pointer-drag calls คืนค่าแล้วแต่ตำแหน่งไม่เปลี่ยน จึงยังไม่ถือว่าทดสอบ mouse drag ผ่าน และยังไม่เพียงพอจะสรุปว่าเป็น bug ของแอป ต้องลองลาก node/เชื่อม handles/ลาก splitters ด้วยเมาส์ใน native GUI ก่อนปิด 4V
+
+ข้อจำกัด tests เดิม: full library unit-test build บน Windows เคยติด `std::os::unix` ใน `crates/core/src/multi_tenant/registry.rs` ภายใต้ test configuration จึงไม่ควรอ้างว่า full Rust tests ผ่านจากผล GUI build หรือ dedicated test suite เท่านั้น งานชุดนี้ไม่แก้ unrelated test code เพื่อเลี่ยงปัญหานั้น
+
+### หลักฐานจากรอบก่อน — ไม่ใช่ผลของ source ชุดนี้
+
+baseline ก่อน schema-v2 เคย build และเปิด development GUI ได้ แต่ผลในตารางด้านบนเป็นการตรวจ source รอบนี้แยกต่างหาก
+
+## คำสั่งสำหรับตรวจและ build
+
+จาก `frontend/`:
+
+```powershell
+npm run test:transport
+npx tsc -b
+npx eslint src/components/TransportView.tsx src/components/transport
+npm run build
+```
+
+จาก repository root:
+
+```powershell
+cargo test --features gui --test transport_project
+cargo fmt --all -- --check
+cargo build --release --features gui --bin thclaws
+```
+
+คำสั่ง release build ที่สำเร็จในงานชุดที่ 1 และนำมาใช้ build Result Viewer iteration ต่อ ใช้ target directory ชั่วคราวเพื่อหลีกเลี่ยง file-sharing lock ใน directory เดิม:
+
+```powershell
+& 'C:\Users\natachai\.cargo\bin\cargo.exe' build --release --features gui --bin thclaws --target-dir 'C:\Users\natachai\AppData\Local\Temp\thclaws-transport-build-20260830'
+```
+
+ทั้งงานชุดที่ 1 และ Result Viewer iteration ใช้วิธีนี้: ผลลัพธ์ `C:\Users\natachai\AppData\Local\Temp\thclaws-transport-build-20260830\release\thclaws.exe` คัดลอกกลับ `target/release/thclaws.exe` ใน repository แล้วตรวจ SHA256 ต้นทาง/ปลายทางตรงกัน ไม่ได้เปลี่ยน source/config เพื่อ bypass compile error; hash และหลักฐาน browser/native launch ของ Result Viewer รอบล่าสุดอยู่ใน verification ด้านบน
+
+ไม่ต้อง install หรือ overwrite THClaws ที่ติดตั้งอยู่เดิม; development executable คือ `target/release/thclaws.exe`
+
+## คำสั่งเปิด Development GUI หลัง build ผ่าน — พร้อมหลักฐาน launch งานชุดที่ 1
 
 ```powershell
 Start-Process `
   -FilePath 'C:\Users\natachai\Dropbox\thClaws-transport-dev\thClaws\target\release\thclaws.exe' `
   -ArgumentList '--gui' `
-  -WorkingDirectory 'C:\Users\natachai\Dropbox\thClaws-transport-dev\thClaws'
+  -WorkingDirectory 'C:\Users\natachai\Dropbox\thClaws-transport-dev\thClaws' `
+  -WindowStyle Normal
 ```
 
-## Warnings ที่ยังมีอยู่
+ตรวจรอบนี้: launch ปกติสร้าง detached child ตาม source แต่ process ปิดภายหลังโดยยังไม่ทราบว่าเกิดจากการปิดหน้าต่างหรือ startup failure จึงลองเปิดพร้อมเก็บ log โดยตั้ง `THCLAWS_GUI_DETACHED=1` เฉพาะ process launch (ข้ามการ respawn ซึ่ง source รองรับอยู่แล้ว) และคืน environment ของ shell หลังสั่งเปิด ไม่แก้ source/config ถาวร
 
-เป็น warnings เดิมของ repository ไม่ได้เกิดจาก Transport state change:
+คำสั่งเปิดครั้งที่ยืนยันหน้าต่างได้ ใช้ executable/arguments/working directory ข้างต้น พร้อม `-RedirectStandardOutput 'C:\Users\natachai\Dropbox\thClaws-transport-dev\thClaws\target\transport-ui-e2e\gui.stdout.log'` และ `-RedirectStandardError 'C:\Users\natachai\Dropbox\thClaws-transport-dev\thClaws\target\transport-ui-e2e\gui.stderr.log'` ผลตรวจได้ process ID `38588`, `Exited=False`, window title `thClaws` ไม่มี startup panic ใน log ที่อ่าน
+
+ปิดเฉพาะ `--serve --port 18765` test server ที่สร้างในรอบนี้แล้ว ไม่หยุดหรือเปลี่ยน installation เดิม
+
+## Warnings เดิมที่ต้องติดตาม
 
 - Cargo workspace ใช้ resolver 1 โดย default
-- unused import ใน `crates/core/src/providers/agent_sdk.rs`
-- dead code `binary_on_path`
-- dead code `DAEMON_LABEL`
-- Vite แจ้งว่า `inlineDynamicImports` deprecated และแนะนำ `codeSplitting: false`
+- unused Windows `CommandExt` import ใน `crates/core/src/providers/agent_sdk.rs`
+- dead code `binary_on_path` และ `DAEMON_LABEL`
+- Vite: `inlineDynamicImports` deprecated
+- full Rust library test build บน Windows มี Unix-specific test code เดิมตามที่ระบุข้างต้น
 
-## Working tree
+ข้อจำกัด environment ที่บันทึกจากงานชุดที่ 1:
 
-Branch ปัจจุบันคือ `transport-ui`
+- Vite ใน sandbox เคยติด `spawn EPERM`; คำสั่ง build เดิมผ่านเมื่อได้รับอนุญาตให้รันนอก sandbox ไม่ได้แก้ config/source เพื่อข้าม error
+- Rust release rebuild ติด Windows file-sharing violation (`os error 32`) ซ้ำตอนลบ temporary archive ใน `target/release/deps`; build ผ่านด้วย temporary `--target-dir` ตามคำสั่งด้านบน เป็น build-artifact lock ไม่ใช่ source compile error ไม่ได้ลบ cache หรือหยุด Dropbox
+- Git แจ้ง LF → CRLF ตาม Windows line-ending policy; `git diff --check` และ `cargo fmt --all -- --check` ผ่าน
+- Native startup เตือนว่ามี installation เดิมอีกแห่งบน PATH; รอบนี้เปิด executable ด้วย absolute path และไม่ลบ/แก้ installation เดิม
+- Native startup รายงานข้าม corrupt lines ใน session history เดิมบางไฟล์; ไม่ได้แก้ไขหรือล้างข้อมูลเหล่านั้น และไม่ใช่ error ของ Transport project
 
-ก่อนเริ่มอัปเดตเอกสารครั้งนี้ working tree สะอาดที่ commit `0bad0d7` (`update transport ui`)
+## Working tree และงานต่อไป
 
-การเปลี่ยนแปลงรอบนี้เป็นเอกสารเท่านั้น:
+งานสะสมชุดที่ 1 มี frontend, persistence/source-browser Rust, tests และเอกสาร รวม release-profile development build ส่วน Result Viewer iteration เพิ่มเฉพาะ frontend/tests/docs ตามรายการด้านบน ยังไม่ได้สร้าง installer/เผยแพร่ release และไม่แตะ installation เดิม
 
-- แก้ไข `TRANSPORT_STATUS.md`
-- สร้าง `TRANSPORT_ENGINE_ROADMAP.md`
+Roadmap ฉบับเต็ม: [TRANSPORT_ENGINE_ROADMAP.md](./TRANSPORT_ENGINE_ROADMAP.md)
 
-ไม่มี source code, frontend, Rust หรือ backend file ถูกแก้ไขในงานบันทึก roadmap นี้
-
-## งานถัดไปที่แนะนำ
-
-Roadmap ฉบับเต็ม: [`TRANSPORT_ENGINE_ROADMAP.md`](./TRANSPORT_ENGINE_ROADMAP.md)
-
-ลำดับหลักที่ตกลงไว้:
-
-1. Refactor Transport Project เป็น engine-neutral schema v2
-2. เพิ่ม migration จาก schema v1 และรักษา project เดิม
-3. กำหนด stable action IDs, multi-port contract และ parameter schema
-4. สร้าง `transport-engine/` เป็น Python package
-5. กำหนด versioned JSON Lines runner protocol
-6. เพิ่ม Rust runner bridge และ execution IPC
-7. ทดสอบ end-to-end ด้วย stub engine
-8. นำ algorithm จริงเข้าทีละโมดูลพร้อม regression tests
-9. เชื่อม result artifacts กับ GIS Viewer
-10. เชื่อม Chat/Agent แล้วจึงเพิ่ม MCP
-11. ทำ binary packaging และ license verification ภายใน engine เมื่อ contract เสถียร
+1. ทำ manual mouse resize/drag acceptance ของ Result Viewer ใน development GUI ที่เปิดไว้; native launch, desktop build และ browser checks ของ binary ล่าสุดผ่านแล้ว
+2. ทำ manual mouse-drag acceptance ใน native GUI ก่อนปิด 4V ของ foundation; native launch, migration-copy และ no-Transport-leak browser regression ของงานชุดที่ 1 ผ่านแล้ว
+3. ล็อก runner protocol ทั้ง `run_action` และ `run_workflow`, node progress, error และ artifacts
+4. สร้าง Python package `thclaws_transport` พร้อม stub runner และ Rust bridge
+5. ทดสอบ end-to-end ด้วย stub ก่อนรับ algorithm จริงทีละโมดูล
+6. GIS output จริง, Chat control, MCP และ binary packaging เป็น milestone หลังจาก execution contract เสถียร

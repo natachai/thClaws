@@ -4,11 +4,13 @@ export type SavedTransportProject = {
   id: string;
   name: string;
   path: string;
+  backupPath?: string;
 };
 
 type TransportProjectToolbarProps = {
   projectName: string;
   dirty: boolean;
+  busy: boolean;
   projects: SavedTransportProject[];
   selectedProjectId: string;
   onProjectNameChange: (name: string) => void;
@@ -16,6 +18,7 @@ type TransportProjectToolbarProps = {
   onNew: () => void;
   onOpen: () => void;
   onSave: () => void;
+  onSaveAs: () => void;
   onValidate: () => void;
   onRun: () => void;
 };
@@ -25,6 +28,7 @@ const buttonClass = "flex h-8 items-center gap-1.5 rounded border px-2.5 text-xs
 export function TransportProjectToolbar({
   projectName,
   dirty,
+  busy,
   projects,
   selectedProjectId,
   onProjectNameChange,
@@ -32,6 +36,7 @@ export function TransportProjectToolbar({
   onNew,
   onOpen,
   onSave,
+  onSaveAs,
   onValidate,
   onRun,
 }: TransportProjectToolbarProps) {
@@ -48,7 +53,7 @@ export function TransportProjectToolbar({
           placeholder="Transport project name"
         />
       </label>
-      <button type="button" onClick={onNew} className={buttonClass} style={borderStyle} title="New Transport Project"><FilePlus2 size={13} />New</button>
+      <button type="button" onClick={onNew} disabled={busy} className={buttonClass} style={borderStyle} title="New Transport Project"><FilePlus2 size={13} />New</button>
       <select
         value={selectedProjectId}
         onChange={(event) => onSelectProject(event.target.value)}
@@ -59,11 +64,11 @@ export function TransportProjectToolbar({
         <option value="">Saved projects</option>
         {projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
       </select>
-      <button type="button" onClick={onOpen} disabled={!selectedProjectId} className={buttonClass} style={borderStyle} title="Open selected project"><FolderOpen size={13} />Open</button>
-      <button type="button" onClick={onSave} className={buttonClass} style={borderStyle} title="Save project"><Save size={13} />Save{dirty ? "*" : ""}</button>
+      <button type="button" onClick={onOpen} disabled={busy || !selectedProjectId} className={buttonClass} style={borderStyle} title="Open selected project"><FolderOpen size={13} />Open</button>
+      <button type="button" onClick={onSave} disabled={busy} className={buttonClass} style={borderStyle} title="Save project with a backup before overwriting"><Save size={13} />Save{dirty ? "*" : ""}</button>
+      <button type="button" onClick={onSaveAs} disabled={busy} className={buttonClass} style={borderStyle} title="Save a new project copy without overwriting any file">Save As Copy</button>
       <button type="button" onClick={onValidate} className={buttonClass} style={borderStyle} title="Validate workflow"><ShieldCheck size={13} />Validate</button>
       <button type="button" onClick={onRun} className={`${buttonClass} font-medium`} style={{ borderColor: "var(--accent-dim)", background: "var(--accent)", color: "var(--accent-fg)" }} title="Validate and run workflow"><Play size={13} />Run Workflow</button>
     </div>
   );
 }
-

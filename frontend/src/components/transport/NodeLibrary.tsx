@@ -1,14 +1,22 @@
-import { GripVertical, PanelLeftClose, PanelLeftOpen } from "lucide-react";
-import { DATA_NODE_TYPES, TRANSPORT_NODE_TYPES } from "./transportTypes";
+import { Database, GripVertical, PanelLeftClose, PanelLeftOpen, Plus } from "lucide-react";
+import { MODEL_ACTIONS, type TransportModelNode } from "./transportTypes";
 
 type NodeLibraryProps = {
   collapsed: boolean;
   onToggleCollapsed: () => void;
+  dataNodes: TransportModelNode[];
+  onCreateData: () => void;
+  onEditNode: (id: string) => void;
+  onAddModel: (actionId: string) => void;
 };
 
 export function NodeLibrary({
   collapsed,
   onToggleCollapsed,
+  dataNodes,
+  onCreateData,
+  onEditNode,
+  onAddModel,
 }: NodeLibraryProps) {
   return (
     <section
@@ -65,25 +73,25 @@ export function NodeLibrary({
         aria-hidden={collapsed}
       >
         <p className="px-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>Data</p>
-        {DATA_NODE_TYPES.map((node) => (
-          <NodeLibraryButton key={node.transportType} label={node.label} transportType={node.transportType} description={`${node.dataType} input`} />
-        ))}
+        <button type="button" onClick={onCreateData} className="flex items-center gap-2 rounded-md border px-3 py-2.5 text-left text-xs hover:bg-[var(--bg-tertiary)]" style={{ borderColor: "var(--accent-dim)", color: "var(--text-primary)" }}><Plus size={15} />Create new data</button>
+        {dataNodes.map((node) => <button key={node.id} type="button" onClick={() => onEditNode(node.id)} className="flex items-center gap-2 rounded border px-2 py-2 text-left text-xs hover:bg-[var(--bg-tertiary)]" style={{ borderColor: "var(--border)", color: "var(--text-primary)" }} title="Edit data source and details"><Database size={13} className="shrink-0" /><span className="min-w-0 truncate">{node.label}</span></button>)}
         <p className="mt-2 px-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>Modelling</p>
-        {TRANSPORT_NODE_TYPES.map((node) => (
-          <NodeLibraryButton key={node.transportType} label={node.label} transportType={node.transportType} description="Model component" />
+        {MODEL_ACTIONS.map((node) => (
+          <NodeLibraryButton key={node.actionId} label={node.label} actionId={node.actionId} onAdd={() => onAddModel(node.actionId)} description="Click or drag to add" />
         ))}
       </div>
     </section>
   );
 }
 
-function NodeLibraryButton({ label, transportType, description }: { label: string; transportType: string; description: string }) {
+function NodeLibraryButton({ label, actionId, description, onAdd }: { label: string; actionId: string; description: string; onAdd: () => void }) {
   return (
     <button
       type="button"
       draggable
+      onClick={onAdd}
       onDragStart={(event) => {
-        event.dataTransfer.setData("application/thclaws-transport-node", transportType);
+        event.dataTransfer.setData("application/thclaws-transport-node", actionId);
         event.dataTransfer.effectAllowed = "copy";
       }}
       className="flex w-full items-center gap-2 rounded-md border px-3 py-2.5 text-left transition-colors hover:border-[var(--accent-dim)]"

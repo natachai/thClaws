@@ -8,19 +8,25 @@ import {
   type EdgeChange,
   type NodeChange,
   type Connection,
+  type Viewport,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { Focus, Maximize, Minus, Minimize2, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { useCallback, useState } from "react";
 import { TransportNode } from "./TransportNode";
-import { ALL_TRANSPORT_NODE_TYPES, type TransportWorkflowEdge, type TransportWorkflowNode } from "./transportTypes";
+import { MODEL_ACTIONS } from "./transportTypes";
+import type { TransportFlowEdge, TransportFlowNode } from "./transportFlow";
 
 type WorkflowCanvasProps = {
   focused: boolean;
   onToggleFocus: () => void;
-  nodes: TransportWorkflowNode[];
-  edges: TransportWorkflowEdge[];
-  onNodesChange: (changes: NodeChange<TransportWorkflowNode>[]) => void;
+  nodes: TransportFlowNode[];
+  edges: TransportFlowEdge[];
+  viewport?: Viewport;
+  active: boolean;
+  onViewportChange: (viewport: Viewport) => void;
+  onEditNode: (id: string) => void;
+  onNodesChange: (changes: NodeChange<TransportFlowNode>[]) => void;
   onEdgesChange: (changes: EdgeChange[]) => void;
   onAddNode: (nodeType: string, position: { x: number; y: number }) => void;
   onConnect: (connection: Connection) => void;
@@ -31,7 +37,7 @@ const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 2;
 const ZOOM_STEP = 0.1;
 
-function WorkflowEditor({ nodes, edges, onNodesChange, onEdgesChange, onAddNode, onConnect }: Omit<WorkflowCanvasProps, "focused" | "onToggleFocus">) {
+function WorkflowEditor({ nodes, edges, viewport, active, onViewportChange, onEditNode, onNodesChange, onEdgesChange, onAddNode, onConnect }: Omit<WorkflowCanvasProps, "focused" | "onToggleFocus">) {
   const [zoom, setZoom] = useState(1);
   const { screenToFlowPosition, fitView, getViewport, setViewport } = useReactFlow();
 
@@ -39,10 +45,10 @@ function WorkflowEditor({ nodes, edges, onNodesChange, onEdgesChange, onAddNode,
     (event: React.DragEvent) => {
       event.preventDefault();
       const transportType = event.dataTransfer.getData("application/thclaws-transport-node");
-      const definition = ALL_TRANSPORT_NODE_TYPES.find((item) => item.transportType === transportType);
+      const definition = MODEL_ACTIONS.find((item) => item.actionId === transportType);
       if (!definition) return;
       const position = screenToFlowPosition({ x: event.clientX, y: event.clientY });
-      onAddNode(definition.transportType, position);
+      onAddNode(definition.actionId, position);
     },
     [onAddNode, screenToFlowPosition],
   );
@@ -64,12 +70,18 @@ function WorkflowEditor({ nodes, edges, onNodesChange, onEdgesChange, onAddNode,
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
+        viewport={viewport}
+        onViewportChange={onViewportChange}
+        onNodeDoubleClick={(_, node) => onEditNode(node.id)}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onMove={(_, viewport) => setZoom(viewport.zoom)}
-        fitView
-        deleteKeyCode={["Backspace", "Delete"]}
+        fitView={!viewport}
+        deleteKeyCode={active ? ["Backspace", "Delete"] : null}
+        nodesDraggable={active}
+        nodesConnectable={active}
+        elementsSelectable={active}
         selectionOnDrag
         panOnDrag
         minZoom={MIN_ZOOM}
@@ -100,7 +112,7 @@ function WorkflowEditor({ nodes, edges, onNodesChange, onEdgesChange, onAddNode,
   );
 }
 
-export function WorkflowCanvas({ focused, onToggleFocus, nodes, edges, onNodesChange, onEdgesChange, onAddNode, onConnect }: WorkflowCanvasProps) {
+export function WorkflowCanvas({ focused, onToggleFocus, ...editorProps }: WorkflowCanvasProps) {
   return (
     <section className="flex h-full min-h-72 flex-col overflow-hidden rounded-lg border lg:min-h-96 xl:min-h-0" style={{ background: "var(--bg-secondary)", borderColor: "var(--border)" }}>
       <header className="flex items-center gap-3 border-b px-4 py-3" style={{ borderColor: "var(--border)" }}>
@@ -112,7 +124,7 @@ export function WorkflowCanvas({ focused, onToggleFocus, nodes, edges, onNodesCh
       </header>
       <div className="min-h-0 flex-1" style={{ background: "var(--bg-primary)" }}>
         <ReactFlowProvider>
-          <WorkflowEditor nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onAddNode={onAddNode} onConnect={onConnect} />
+          <WorkflowEditor {...editorProps} />
         </ReactFlowProvider>
       </div>
     </section>

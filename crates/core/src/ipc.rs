@@ -5858,11 +5858,13 @@ pub fn handle_ipc(msg: Value, ctx: &IpcContext) -> bool {
             let payload = match crate::transport_project::list() {
                 Ok(projects) => serde_json::json!({
                     "type": "transport_project_list",
+                    "requestId": msg.get("requestId"),
                     "ok": true,
                     "projects": projects,
                 }),
                 Err(error) => serde_json::json!({
                     "type": "transport_project_list",
+                    "requestId": msg.get("requestId"),
                     "ok": false,
                     "projects": [],
                     "error": error,
@@ -5877,14 +5879,26 @@ pub fn handle_ipc(msg: Value, ctx: &IpcContext) -> bool {
                 .get("project")
                 .cloned()
                 .unwrap_or(serde_json::Value::Null);
-            let payload = match crate::transport_project::save(name, &project) {
+            let save_as = msg.get("saveAs").and_then(|v| v.as_bool()).unwrap_or(false);
+            let result = match msg.get("id") {
+                Some(serde_json::Value::String(id)) => {
+                    crate::transport_project::save(name, &project, Some(id), save_as)
+                }
+                None | Some(serde_json::Value::Null) => {
+                    crate::transport_project::save(name, &project, None, save_as)
+                }
+                _ => Err("project ID must be a string".to_string()),
+            };
+            let payload = match result {
                 Ok(summary) => serde_json::json!({
                     "type": "transport_project_saved",
+                    "requestId": msg.get("requestId"),
                     "ok": true,
                     "project": summary,
                 }),
                 Err(error) => serde_json::json!({
                     "type": "transport_project_saved",
+                    "requestId": msg.get("requestId"),
                     "ok": false,
                     "error": error,
                 }),
@@ -5897,14 +5911,96 @@ pub fn handle_ipc(msg: Value, ctx: &IpcContext) -> bool {
             let payload = match crate::transport_project::load(id) {
                 Ok((summary, project)) => serde_json::json!({
                     "type": "transport_project_loaded",
+                    "requestId": msg.get("requestId"),
                     "ok": true,
                     "summary": summary,
                     "project": project,
                 }),
                 Err(error) => serde_json::json!({
                     "type": "transport_project_loaded",
+                    "requestId": msg.get("requestId"),
                     "ok": false,
                     "error": error,
+                }),
+            };
+            (ctx.dispatch)(payload.to_string());
+        }
+
+        // Transport has a dedicated read-only source picker. Do not reuse
+        // file_tree: the mounted Files tab also subscribes to that event.
+        "transport_data_sources" => {
+            let raw_path = crate::file_preview::ospath(
+                msg.get("path").and_then(|v| v.as_str()).unwrap_or("."),
+            );
+            let requested_path = if std::path::Path::new(&raw_path).is_absolute() {
+                std::path::PathBuf::from(&raw_path)
+            } else {
+                crate::workdir::current_workdir().join(&raw_path)
+            };
+            let resolved = if crate::workdir::is_multiuser() && !crate::workdir::workdir_is_scoped()
+            {
+                Err("Transport data sources require a scoped user workspace".to_string())
+            } else {
+                crate::sandbox::Sandbox::check(&raw_path).map_err(|e| e.to_string())
+            };
+            let result = resolved.and_then(|resolved| {
+                let directory = resolved
+                    .canonicalize()
+                    .map_err(|e| format!("resolve data source directory: {e}"))?;
+                let entries =
+                    std::fs::read_dir(&directory).map_err(|e| format!("list data sources: {e}"))?;
+                let mut items: Vec<serde_json::Value> = entries
+                    .filter_map(Result::ok)
+                    .filter_map(|entry| {
+                        let name = entry.file_name().to_string_lossy().into_owned();
+                        if name.starts_with('.') {
+                            return None;
+                        }
+                        let file_type = entry.file_type().ok()?;
+                        // Do not follow symlinks/reparse links to a source
+                        // outside the workspace, and never read contents.
+                        if !file_type.is_dir() && !file_type.is_file() {
+                            return None;
+                        }
+                        let is_directory = file_type.is_dir();
+                        let path = entry.path();
+                        if !is_directory {
+                            let extension = path.extension()?.to_str()?.to_ascii_lowercase();
+                            if !matches!(extension.as_str(), "csv" | "shp" | "geojson" | "parquet")
+                            {
+                                return None;
+                            }
+                        }
+                        let path = crate::sandbox::Sandbox::check(&path.to_string_lossy()).ok()?;
+                        Some(serde_json::json!({
+                            "name": name,
+                            "path": path.to_string_lossy(),
+                            "isDirectory": is_directory,
+                        }))
+                    })
+                    .collect();
+                items.sort_by(|a, b| {
+                    b["isDirectory"]
+                        .as_bool()
+                        .cmp(&a["isDirectory"].as_bool())
+                        .then_with(|| {
+                            a["name"]
+                                .as_str()
+                                .unwrap_or("")
+                                .to_lowercase()
+                                .cmp(&b["name"].as_str().unwrap_or("").to_lowercase())
+                        })
+                });
+                Ok((directory, items))
+            });
+            let payload = match result {
+                Ok((path, entries)) => serde_json::json!({
+                    "type": "transport_data_sources", "requestId": msg.get("requestId"),
+                    "ok": true, "path": path.to_string_lossy(), "entries": entries,
+                }),
+                Err(error) => serde_json::json!({
+                    "type": "transport_data_sources", "requestId": msg.get("requestId"),
+                    "ok": false, "path": requested_path.to_string_lossy(), "entries": [], "error": error,
                 }),
             };
             (ctx.dispatch)(payload.to_string());
