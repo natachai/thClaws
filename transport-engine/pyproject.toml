@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "thclaws-transport"
+version = "0.1.0.dev1"
+description = "Local experimental THClaws transport engine: eBUMpy Trip Generation adapter"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+thclaws-transport = "thclaws_transport.runner:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["thclaws_transport*"]

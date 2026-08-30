@@ -1,0 +1,4 @@
+# Preserve the byte-identical imported modules, including original line endings.
+src/thclaws_transport/generation/calculation.py -text
+src/thclaws_transport/generation/csv_tools.py -text
+src/thclaws_transport/generation/dbf_reader.py -text

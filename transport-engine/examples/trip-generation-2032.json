@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "actionId": "transport.trip_generation",
+  "parameters": { "year": 2032 },
+  "inputs": {
+    "demographic_dbf": "local-fixtures/trip-generation-2032/inputs/BTDS planning data 2032 V2.dbf",
+    "attraction_dbf": "local-fixtures/trip-generation-2032/inputs/ATTR_MOD.DBF",
+    "survey_trip_rate_csv": "local-fixtures/trip-generation-2032/inputs/Trip Rate_BTDS2565_SURVEY.csv",
+    "tour_trip_rate_csv": "local-fixtures/trip-generation-2032/inputs/Trip Rate_BTDS2565_TOUR.csv",
+    "seed_csv": "local-fixtures/trip-generation-2032/inputs/BTDS_SEED_CH_NEW.CSV",
+    "density_adjustment_csv": "local-fixtures/trip-generation-2032/inputs/ADJTAB.CSV",
+    "year_adjustment_csv": "local-fixtures/trip-generation-2032/inputs/BTDS_YEARADJUST.CSV"
+  }
+}

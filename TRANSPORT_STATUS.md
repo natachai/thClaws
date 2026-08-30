@@ -1,12 +1,42 @@
 # THClaws Development Status
 
-อัปเดตล่าสุด: 30 สิงหาคม 2026
+อัปเดตล่าสุด: 31 สิงหาคม 2026
 
 Branch: `transport-ui`
 
 ฐานก่อนงาน foundation ชุดที่ 1: commit `69e33e9`
 
-## สรุป iteration ล่าสุด — Result Viewer
+## สรุป iteration ล่าสุด — Trip Generation ครบ 8 ปี
+
+เพิ่ม standalone TG batch ปี **2022, 2027, 2032, 2037, 2042, 2047, 2052, 2057** จาก demographic/attraction inputs ของแต่ละปีจริง ไม่ใช้ DBF ปีเดียวแทนทุกปี และไม่เปลี่ยน formulas
+
+- ผู้ใช้อนุญาต copy inputs ที่จำเป็นจาก `planning/` และ `Project/` นอก eBUMpy; originals read-only ไม่รัน original scripts
+- `transport-engine/local-fixtures/trip-generation-all-years/` มี 21 inputs / 7,523,177 bytes: 16 year-specific DBFs + 3 planning coefficient files + 2 reviewed eBUMpy settings snapshots พร้อม source/hash manifest
+- ทุกปี preflight ผ่าน: demographic 1,778 zones / attraction 1,805 records; final tests **52/52** ผ่าน (33 เดิม + 19 batch, no skips, 5.032 s), saved batch **8 completed / 0 failed**
+- แต่ละ batch มี `summary.json`/`summary.md` ใน directory ใหม่ และแต่ละปีมี run UUID/artifacts directory ใหม่แยกกัน ไม่เขียนทับผลเก่า
+- ไม่ install, ไม่แก้ frontend/Rust, ไม่ build GUI; Run Workflow ในแอปยัง validate-only, Result Viewer ยัง demo และ full-workflow bridge/calibration ยังไม่เสร็จ
+
+รันจาก `transport-engine/`: `python -B scripts/run_trip_generation_all_years.py` แล้วตรวจ saved outputs ด้วย `python -B scripts/verify_trip_generation_batch.py --summary runs/<batch-id>/summary.json` และ originals/copies ด้วย `scripts/copy_trip_generation_all_years.ps1 -VerifyOnly` รายละเอียดใน [engine README](./transport-engine/README.md)
+
+ผล batch ล่าสุด: [summary.md](./transport-engine/runs/trip-generation-batch-ecb56920e54b47769121e6cdf4d2e2f4/summary.md) / [summary.json](./transport-engine/runs/trip-generation-batch-ecb56920e54b47769121e6cdf4d2e2f4/summary.json) รวม ownership counts และคำเตือนรายปี ตรวจ 56 artifacts / 40 CSVs ผ่าน hash/size/fields/rows/finite numbers/P–A balance/sums ตาม tolerance; verification report อยู่ directory เดียวกันชื่อ `verification-8ad9ee7ca2e84593b44e718315677e29.json`
+
+ปี 2032 เทียบ 5 CSV SHA256 ตรง goldens และ totals/QA เท่ากัน; อีก 7 ปีผ่าน integrity/accounting checks **ไม่ใช่ golden/calibration/Cube verification** Inputs 21 files originals/copies SHA256/size/mtime และ TG source/copies 128 files ตรวจหลังรันไม่เปลี่ยน Run ทดสอบก่อนหน้าเก็บไว้ไม่ overwrite; ใช้ batch `ecb56920e54b47769121e6cdf4d2e2f4` เป็นรอบส่งมอบล่าสุด ผล 2032 iteration เดิมด้านล่างคงไว้เป็น historical evidence
+
+## หลักฐาน iteration ก่อนหน้า — standalone Trip Generation 2032
+
+เริ่มแยก engine จริงเป็น Python package `thclaws_transport` ใน `transport-engine/` โดยนำเข้า **Trip Generation เท่านั้น** จาก eBUMpy เป็น bounded standalone prototype ไม่ใส่ algorithms ใน React/Rust และไม่เชื่อม GUI ในรอบนี้
+
+- คัดลอก TG เต็มชุด 128 files / 30,005,543 bytes ไป `transport-engine/reference/trip-generation/` ยกเว้น caches; SHA256 manifests เก็บ provenance และ conflict copies โดยไม่ merge
+- คัดลอก fixture 2032: 7 inputs / 952,522 bytes และ 8 historical expected files / 6,345,448 bytes; ผลใหม่เทียบกับ historical goldens ผ่าน
+- canonical `generation/calculation.py` byte-identical; explicit-input adapter และ local single-action runner `transport.trip_generation` ลงและทดสอบแล้ว
+- ใช้ Python 3.11.9 standard library; ไม่ติดตั้ง dependencies เพิ่ม ไม่ compile engine binary
+- **Engine tests 33/33, 2032 regression และ standalone smoke run ผ่าน**; CSV 5 outputs SHA256 เหมือน goldens ทุก byte, totals/QA JSON เท่ากันเชิงข้อมูล รายละเอียด copy/contract/scientific warnings อยู่ใน [REVIEW_EBUMPY.md](./transport-engine/REVIEW_EBUMPY.md)
+
+ผู้ใช้เลือกรับ real TG เข้ามาทดลองแยกก่อน full stub/Rust milestone ไม่ถือว่า full-workflow runner/JSONL/Rust bridge เสร็จ ไม่มี frontend/backend edits หรือ GUI build ใหม่ใน iteration นี้ งาน backend persistence/source browser เดิมยังอยู่
+
+**UI Run Workflow ยัง validate-only และ Result Viewer ยังเป็น demo** ไม่สามารถกด Run ใน Transport แล้วเรียก prototype นี้ได้ ยังต้องออกแบบ mapping ของ TG inputs, artifact contract และเชื่อม Rust ใน milestone ถัดไป
+
+## สรุป iteration ก่อนหน้า — Result Viewer
 
 เปลี่ยน panel ขวาจาก GIS Viewer เป็น **Result Viewer** ที่มี GIS / Data / Chart โดยใช้ dataset เดียวกันทั้งสามมุมมอง ไม่ผูกกับ node ชนิดใดโดยเฉพาะ
 
@@ -18,7 +48,7 @@ Source, TypeScript/lint, tests 38/38, frontend/desktop builds, browser checks �
 
 **หลักฐานงานชุดที่ 1:** implementation, automated checks, frontend/desktop build, browser end-to-end checks และ native GUI launch ของงานชุดที่ 1 ผ่านแล้ว ยังเหลือ manual acceptance ของ mouse drag ตามส่วน Verification งานชุดที่ 1 ด้านล่าง จึงยังไม่ปิด verification ทั้ง milestone
 
-ยังไม่มี calculation engine: ปุ่ม **Run Workflow** ตรวจโครงสร้างเท่านั้น ไม่ได้คำนวณหรือสร้างผลลัพธ์แบบจำลองจริง
+ปุ่ม **Run Workflow** ตรวจโครงสร้างเท่านั้น ไม่ได้คำนวณหรือสร้างผลลัพธ์จริงในแอป แม้ตอนนี้เริ่มทำ standalone TG engine แยกแล้ว งานชุดที่ 1 และ Result Viewer ยังไม่ได้เชื่อม execution
 
 ## Workspace และ UI ปัจจุบัน
 
@@ -174,13 +204,35 @@ project files ยังอยู่ใต้ `.thclaws/transport/projects/` ใ�
 
 ยังไม่เชื่อม:
 
-- calculation engine / Python runner / Rust execution bridge
+- UI → standalone Python engine / Rust execution bridge (TG prototype แยกอยู่ใน `transport-engine/`)
 - run/progress/result events
 - Chat control, GIS results, MapLibre/QGIS, MCP
 
-ดังนั้นคำว่า “backend ยังไม่เชื่อม” ไม่ถูกต้องทั้งหมด: persistence และ source browser เชื่อม Rust แล้ว แต่ **calculation engine และ Chat tools ยังไม่มี**
+ดังนั้นคำว่า “backend ยังไม่เชื่อม” ไม่ถูกต้องทั้งหมด: persistence และ source browser เชื่อม Rust แล้ว แต่ **UI ยังไม่เชื่อม calculation execution และ Chat tools ยังไม่มี**
+
+## Verification — standalone TG 2032 iteration ก่อนหน้า
+
+| รายการ | สถานะรอบนี้ |
+| --- | --- |
+| Original eBUMpy source | Read-only; ไม่ execute/import/เขียน cache หรือแก้ต้นฉบับ |
+| Full TG snapshot | 128 files, SHA256 manifest; canonical formula copy เหมือนเดิมทุก byte |
+| Broad review archive ก่อนจำกัด scope | 186 source/config/docs + 15 fixture + 3 runtime = 204 selected copy records; อยู่ใน ignored reference ไม่ใช่การ implement โมดูลอื่น |
+| Destination package/adapter/action runner tests | ผ่าน `python -B scripts/test_engine.py`: 33/33, no skips, 4.241 s |
+| 2032 output regression + invalid-input/path/no-overwrite tests | ผ่าน: CSV 5 files SHA256 ตรง goldens และ totals/QA JSON semantic equality; ปฏิเสธ abbreviated workspace override ด้วย |
+| Standalone run/artifacts | ผ่าน run `trip-generation-416ef99a71ba4a1eb2c1df1d07976dd8` (~1.5 s): P/A/zonal 1,778 rows ต่อ table, long 28,448, age-long 85,344 |
+| Original/copy verification หลังรัน | TG 128 files ต้นฉบับ/สำเนา SHA256 ไม่เปลี่ยน; initial inventory 3,249 entries metadata และ selected 204 hashes ไม่เปลี่ยน |
+| Package wheel/binary build | ไม่ได้ทำ; source package import/run ผ่านโดยไม่ install, Python 3.11.9/setuptools 65.5.0 มีแล้ว แต่ wheel ไม่มี |
+| Frontend/Rust/GUI checks ของ iteration นี้ | ไม่ได้รันใหม่ — ไม่เปลี่ยน UI/backend; หลักฐาน build ก่อนหน้าแยกด้านล่าง |
+
+Historical TG fixture มี 1,778 zones, age mismatch เกิน 5% 1 zone และ Furness max column residual 1.360739 หลัง 5 iterations; runner แสดง warnings พร้อม legacy blank-to-zero 60 survey/540 seed cells และ tour input ที่ไม่ได้ใช้คำนวณ ไม่แก้สูตรเพื่อซ่อนข้อจำกัด Reproduce output เดิมได้ไม่เท่ากับ scientific calibration หรือ full Cube parity ผ่าน Task 4A/Task 5 ของต้นฉบับยังไม่ถูกปิดโดยงานนี้
+
+คำสั่งจาก `transport-engine/`: `python -B scripts/test_engine.py` และ `python -B scripts/run_trip_generation.py` รันเฉพาะ destination copies ดูคำสั่ง/contract ใน [engine README](./transport-engine/README.md)
 
 ## ไฟล์หลัก
+
+- `transport-engine/REVIEW_EBUMPY.md` — review, source-copy provenance และขอบเขต standalone TG
+- `transport-engine/src/thclaws_transport/generation/` — copied calculation และ destination input adapter; 2032 regression ผ่าน
+- `transport-engine/src/thclaws_transport/runner.py` — local single-action runner ไม่ใช่ full-workflow JSONL/Rust integration
 
 - `frontend/src/components/TransportView.tsx` — composition, layout และ scoped dialogs
 - `frontend/src/components/transport/ResultViewer.tsx` — common result header, controlled GIS/Data/Chart tabs และ mounted-view lifecycle
@@ -216,7 +268,7 @@ project files ยังอยู่ใต้ `.thclaws/transport/projects/` ใ�
 
 เทียบกับจุดเริ่ม Result Viewer iteration: **ไม่มี backend, App.tsx, NodeLibrary.tsx, WorkflowCanvas.tsx หรือ package.json เปลี่ยนเพิ่ม** โดยตรวจ hashes ไว้ ทั้งนี้ Rust persistence/source-browser changes ของงานชุดที่ 1 ยังคงอยู่ ไม่ได้ลบหรือ revert
 
-## Verification — Result Viewer iteration ล่าสุด
+## Verification — Result Viewer iteration ก่อนหน้า
 
 | รายการ | สถานะ iteration นี้ |
 | --- | --- |
@@ -385,13 +437,13 @@ Start-Process `
 
 ## Working tree และงานต่อไป
 
-งานสะสมชุดที่ 1 มี frontend, persistence/source-browser Rust, tests และเอกสาร รวม release-profile development build ส่วน Result Viewer iteration เพิ่มเฉพาะ frontend/tests/docs ตามรายการด้านบน ยังไม่ได้สร้าง installer/เผยแพร่ release และไม่แตะ installation เดิม
+งานสะสมชุดที่ 1 มี frontend, persistence/source-browser Rust, tests และเอกสาร รวม release-profile development build ส่วน Result Viewer iteration เพิ่มเฉพาะ frontend/tests/docs ตามรายการด้านบน; iteration ล่าสุดเพิ่ม standalone TG ภายใต้ `transport-engine/` และเอกสาร ไม่แก้ UI/backend เพิ่ม ไม่สร้าง installer/เผยแพร่ release และไม่แตะ installation เดิม
 
 Roadmap ฉบับเต็ม: [TRANSPORT_ENGINE_ROADMAP.md](./TRANSPORT_ENGINE_ROADMAP.md)
 
-1. ทำ manual mouse resize/drag acceptance ของ Result Viewer ใน development GUI ที่เปิดไว้; native launch, desktop build และ browser checks ของ binary ล่าสุดผ่านแล้ว
-2. ทำ manual mouse-drag acceptance ใน native GUI ก่อนปิด 4V ของ foundation; native launch, migration-copy และ no-Transport-leak browser regression ของงานชุดที่ 1 ผ่านแล้ว
-3. ล็อก runner protocol ทั้ง `run_action` และ `run_workflow`, node progress, error และ artifacts
-4. สร้าง Python package `thclaws_transport` พร้อม stub runner และ Rust bridge
-5. ทดสอบ end-to-end ด้วย stub ก่อนรับ algorithm จริงทีละโมดูล
+1. รักษา standalone TG tests/regression/safety suite ที่ผ่านแล้วเป็น gate; ใช้ destination copies เท่านั้น ไม่ขยายไปโมดูลอื่นโดยอัตโนมัติ
+2. ยืนยัน scientific warnings และ TG input/output contract กับผู้ใช้; ไม่ถือว่า historical reproduction เป็น calibration
+3. ทำ manual mouse resize/drag acceptance ที่ค้างของ Result Viewer และ foundation 4V; หลักฐาน native launch/build/browser เดิมยังคงแยกไว้ ไม่ได้รันซ้ำใน TG iteration
+4. ล็อก full runner protocol ทั้ง `run_action`/`run_workflow`, node progress/errors/artifacts แล้วสร้าง Rust bridge; single-action prototype ไม่ทำให้ tasks เหล่านี้เสร็จ
+5. ทดสอบ end-to-end ด้วย stub/fixtures ก่อนเชื่อม real TG ให้ UI Run เรียกใช้งาน ไม่เพิ่มโมดูลอื่นโดยอัตโนมัติ
 6. GIS output จริง, Chat control, MCP และ binary packaging เป็น milestone หลังจาก execution contract เสถียร

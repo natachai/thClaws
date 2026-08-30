@@ -1,0 +1,10 @@
+# Local copies of private model sources/data: never include these in a release.
+/reference/
+/local-fixtures/
+/runs/
+/build/
+/dist/
+*.egg-info/
+__pycache__/
+*.py[cod]
+.venv/

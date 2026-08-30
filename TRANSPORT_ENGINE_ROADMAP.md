@@ -1,12 +1,16 @@
 # THClaws Transport Engine Roadmap
 
-อัปเดตล่าสุด: 30 สิงหาคม 2026
+อัปเดตล่าสุด: 31 สิงหาคม 2026
 
 Branch: `transport-ui`
 
 สถานะ foundation: implementation, checks/build, browser end-to-end และ native GUI launch ของงานชุดที่ 1 ผ่านแล้ว; รอ manual mouse-drag acceptance ก่อนปิด 4V
 
-Iteration ล่าสุด: Result Viewer GIS/Data/Chart ใช้ shared dataset; source/tests/frontend/desktop builds, browser verification และ native GUI launch รอบใหม่ผ่านแล้ว ยังรอ manual mouse-drag acceptance; calculation engine ยังไม่เริ่ม
+Iteration ล่าสุด: standalone **Trip Generation batch ครบ 8 ปี** 2022–2057 ทุก 5 ปี โดยใช้ DBF ของแต่ละปีและสูตรเดิม; tests 52/52, saved batch 8/8 และ artifact verification ผ่าน ไม่เชื่อม UI/Rust หรือเพิ่มโมดูลอื่น
+
+หลักฐาน engine iteration ก่อนหน้า: package/adapter/local action runner ผ่าน tests 33/33, 2032 regression และ standalone run; full-workflow JSONL protocol/runner bridge ยัง pending
+
+Iteration ก่อนหน้า: Result Viewer GIS/Data/Chart ใช้ shared dataset; source/tests/frontend/desktop builds, browser verification และ native GUI launch ผ่านแล้ว ยังรอ manual mouse-drag acceptance; UI Run ยัง validate-only และ Result Viewer ยังเป็น demo
 
 ## เป้าหมายและขอบเขต
 
@@ -15,7 +19,7 @@ Iteration ล่าสุด: Result Viewer GIS/Data/Chart ใช้ shared data
 - React รู้ stable action IDs และ project contract ไม่รู้ path ภายใน Python model
 - workflow data ไม่ผูกกับ React Flow/XYFlow; layout อยู่ใน `ui`
 - Rust ดูแล persistence, workspace boundaries และในอนาคต process lifecycle/IPC
-- `transport-engine/` จะเป็น Python package `thclaws_transport` ที่ทดสอบแยกได้
+- `transport-engine/` เริ่มเป็น Python package `thclaws_transport` ที่ทดสอบแยกได้ โดยเริ่มจาก TG-only prototype
 - ภายหลังใช้ `.pyd`, `.dll` หรือ `.exe` หลัง runner interface เดิม โดยไม่เปลี่ยน frontend contract
 - commercial algorithms และ license verification อยู่ภายใน engine เท่านั้น
 
@@ -23,7 +27,7 @@ Iteration ล่าสุด: Result Viewer GIS/Data/Chart ใช้ shared data
 | --- | --- | --- |
 | `frontend/` | Editor, source references, metadata, structural validation, progress/result UI | Python paths, process spawning, algorithms, license secrets |
 | `crates/core/` | Safe persistence, source sandbox, IPC; future runner lifecycle/event forwarding | Transport calculations |
-| `transport-engine/` | Future input parsing, algorithm validation/execution, artifacts/licensing | React layout และ THClaws tabs |
+| `transport-engine/` | Standalone TG input adapter/calculation/local artifacts; future workflow execution/licensing | React layout และ THClaws tabs |
 
 Chat และ Transport เป็นคนละ workspace ที่ในอนาคตเข้าถึง Transport Project เดียวกัน ไม่เพิ่ม Chat panel ใน Transport ใน milestone นี้
 
@@ -42,7 +46,35 @@ Chat / Agent                 Transport Workspace
         Python package / compiled engine ภายหลัง
 ```
 
-source ตอนนี้มี UI, project contract, persistence, source browser และ Result Viewer presentation foundation; diagram ส่วน runner/engine/Chat control เป็นเป้าหมาย ไม่ใช่ความสามารถที่รันได้แล้ว
+source ตอนนี้มี UI, project contract, persistence, source browser และ Result Viewer presentation foundation พร้อมเริ่ม standalone TG prototype แยกต่างหาก; diagram ส่วน full-workflow runner/Rust integration/Chat control ยังเป็นเป้าหมาย ไม่ใช่เส้นทางที่ UI เรียกได้แล้ว
+
+## Bounded milestone ล่าสุด — TG all-years batch
+
+- [x] คัดลอก inputs ที่ผู้ใช้อนุญาตจาก `planning/`, `Project/` และ reviewed eBUMpy settings โดย originals read-only: 21 files / 7,523,177 bytes ไป `local-fixtures/trip-generation-all-years/` พร้อม manifest
+- [x] ตรวจ year-specific DBFs ครบ 8 คู่และ pure preflight ทุกปี: planning 1,778 zones / attraction 1,805 records; ไม่เปลี่ยน formula หรือใช้ข้อมูลปีเดียวแทนปีอื่น
+- [x] Saved batch และ final tests/artifact verification — tests 52/52 (เดิม 33 + ใหม่ 19, no skips, 5.032 s), 8 completed / 0 failed; 56 artifacts / 40 CSVs ผ่าน hashes/size/fields/rows/finite values/P–A balance/sums ตาม tolerance; originals/copies 21 inputs และ TG เดิม 128 files ตรวจไม่เปลี่ยนหลังรัน
+
+คำสั่ง `python -B scripts/run_trip_generation_all_years.py`; ผลตัวเลข/คำเตือนอยู่ใน batch `summary.md`/`summary.json` ไม่สร้างรายงานซ้ำ ตรวจด้วย `scripts/copy_trip_generation_all_years.ps1 -VerifyOnly` และ `python -B scripts/verify_trip_generation_batch.py --summary runs/<batch-id>/summary.json`
+
+การผ่าน all-years execution ไม่ใช่ calibration/full Cube parity ไม่เปลี่ยน Task 4A/Task 5 ของต้นฉบับ และไม่ปิด full-workflow runner/Rust/GUI tasks; ไม่มี install/frontend/Rust edits ใน iteration นี้ ยังคง manual UI acceptance เดิมค้าง
+
+รอบส่งมอบล่าสุดคือ `runs/trip-generation-batch-ecb56920e54b47769121e6cdf4d2e2f4/` พร้อม `summary.md`, `summary.json` และ `verification-8ad9ee7ca2e84593b44e718315677e29.json`; run ทดสอบก่อนหน้าเก็บไว้ไม่ overwrite ปี 2032 ผ่าน golden 5 CSV hashes + totals/QA equality ส่วนอีก 7 ปีตรวจ integrity/accounting ไม่ใช่ golden comparison รายละเอียด paths อยู่ใน [TRANSPORT_STATUS.md](./TRANSPORT_STATUS.md)
+
+## หลักฐาน milestone ก่อนหน้า — นำเข้า Trip Generation 2032
+
+ผู้ใช้เลือกนำ real TG มาทดลองเป็น isolated package ก่อน full stub/Rust milestone จึงปรับลำดับงานโดย **ไม่ยกเลิก protocol/integration/safety gates** และไม่เอา model implementation ลง frontend/backend
+
+- คัดลอกต้นฉบับแบบ read-only ไป `transport-engine/reference/trip-generation/`: 128 files / 30,005,543 bytes (~28.62 MiB), ยกเว้น `__pycache__`; เก็บ conflict copies แยกไม่ merge และมี SHA256 manifest
+- archive review กว้างก่อนจำกัด scopeยังอยู่ใน ignored `reference/eBUMpy/`: 186 source/config/docs; initial manifest รวม 204 copy records เมื่อรวม fixture 15 และ runtime 3 ไม่ใช่การ implement โมดูลอื่น
+- fixture 2032 มี 7 inputs / 952,522 bytes และ 8 historical expected files / 6,345,448 bytes; `generation/calculation.py` byte-identical กับ canonical source
+- Python 3.11.9 standard library; ไม่ติดตั้ง NumPy/Pandas/SciPy/GeoPandas/OpenMatrix เพราะ TG ชุดนี้ไม่ต้องใช้ ไม่ compile binary
+- destination adapter รับ explicit six input references และ `year`; optional tour rates เป็น provenance เท่านั้น ไม่มีการ auto-discover หรือเรียก legacy CLI ที่เขียนกลับ original outputs
+- local single-action request ใช้ `schemaVersion`, `actionId`, `parameters`, `inputs`; รองรับ `transport.trip_generation` เท่านั้นและสร้าง unique run artifacts ใน destination ไม่ใช่ full JSONL `run_action`/`run_workflow` protocol ที่เสนอด้านล่าง
+- ไม่มี frontend/Rust edits, GUI integration หรือ desktop build ใหม่; UI Run ยัง structural-validation-only และ Result Viewer ยัง demo
+
+**Verification ของ iteration 2032:** package/adapter/runner tests ผ่าน 33/33 (no skips, 4.241 s); standalone 2032 run ผ่าน โดย CSV 5 files SHA256 เหมือน goldens ทุก byte และ totals/QA JSON เท่ากันเชิงข้อมูล; input/path/no-overwrite tests รวมการป้องกัน abbreviated workspace override ผ่าน หลังรันตรวจ TG 128 files ต้นฉบับ/สำเนา hashes ไม่เปลี่ยนพร้อม initial inventory/selected-copy verification ดู run ID/row counts ใน [TRANSPORT_STATUS.md](./TRANSPORT_STATUS.md) ไม่ใช้ UI build/test ก่อนหน้ามาแทน engine tests ไม่มี wheel/binary build หรือ dependency install
+
+Scientific scope: reproduce frozen legacy outputs ไม่เท่ากับ calibration/full Cube parity; historical fixture มี age mismatch >5% 1 zone และ Furness column residual 1.360739 หลัง 5 iterations ต้องรายงาน warnings ไม่เปลี่ยนสูตรเพื่อให้ผลดูสมบูรณ์ Task 4A/Task 5 ของ original model ยังคงเป็น gate ที่งาน TG-only นี้ไม่ได้แก้ รายละเอียด [REVIEW_EBUMPY.md](./transport-engine/REVIEW_EBUMPY.md)
 
 ## สิ่งที่ทำในงานชุดที่ 1
 
@@ -56,7 +88,7 @@ source ตอนนี้มี UI, project contract, persistence, source browse
 - แต่ละ block แก้ name, note, details และ output names ได้
 - input selector นำ named output จาก block อื่นมาใช้ต่อได้
 
-ยังไม่ทำ: file-content parsing, parameter/calculation engine, MapLibre, MCP, Chat tools, binary compilation หรือ licensing
+ในงานชุดที่ 1 ยังไม่ทำ: file-content parsing, parameter/calculation engine, MapLibre, MCP, Chat tools, binary compilation หรือ licensing; standalone TG adapter/calculation เริ่มใน milestone ใหม่ข้างต้น ไม่ใช่ความสามารถของ Data source UI
 
 ## Result Viewer presentation milestone — iteration หลังงานชุดที่ 1
 
@@ -213,7 +245,9 @@ Block details ให้ตั้งชื่อ block/note/details/output names 
 
 **ขอบเขต contract:** registry นี้เพียงพอสำหรับ structural editor และ migration แต่ required/optional ports, capacities/free-flow-time representation และ parameter schemas ของ algorithm จริงต้องยืนยันด้วย model specification/regression data ก่อน engine milestone ไม่ถือว่าล็อก scientific model แล้ว
 
-## Runner protocol — proposed, ยังไม่ implement
+## Full-workflow runner protocol — proposed, ยังไม่ implement
+
+แยกจาก local TG single-action prototype ที่ทดสอบแล้ว: prototype ไม่รับ project graph, ไม่มี DAG scheduling/JSONL node events และยังไม่มี Rust caller ตัวอย่างด้านล่างเป็น contract proposal ไม่ใช่ request ที่ส่งให้ prototype แล้วรันได้
 
 Rust จะเรียก `python -m thclaws_transport.runner` ในระยะแรก และเปลี่ยนเป็น `thclaws-transport.exe` ภายหลังโดยใช้ JSON Lines stdin/stdout protocol เดิม
 
@@ -283,7 +317,7 @@ workflow request ต้องบรรจุ `workflow.nodes`/`workflow.edges` �
 - structured `failed` มี error code/message และ nodeId ถ้ามี ไม่ส่ง raw traceback เป็น UI error
 - กำหนด timeout, cancellation, duplicate run IDs, partial artifacts และ terminal-event semantics พร้อม tests ก่อนล็อก protocol
 - stdout สงวนให้ JSONL events; diagnostic logging ไป stderr
-- ตัวอย่างนี้เป็น proposal ยังไม่มี Python runner, execution IPC หรือ artifacts จริงในแอป
+- ตัวอย่างนี้เป็น proposal ยังไม่มี full-workflow JSONL runner หรือ execution IPC; standalone TG local runner/artifacts อยู่คนละขั้นและยังไม่ถูกส่งเข้าแอป
 
 ## Foundation build checklist
 
@@ -294,18 +328,18 @@ workflow request ต้องบรรจุ `workflow.nodes`/`workflow.edges` �
 - [x] **3. Structural multi-port registry และ validation** — named ports, compatible binding, required input, broken/unmapped edge, duplicate input และ cycle checks; algorithm parameter schema ยังไม่ final
 - [x] **4. Canvas/state adapter พร้อม Data/Details UI** — controlled XYFlow, source reference wizard, reusable outputs/input selectors, names/notes/details; preserve tab state และ scoped overlays
 - [ ] **4V. ปิด verification งานชุดที่ 1 — ผ่านบางส่วน ยังรอ manual acceptance** — ผ่าน fixtures/tests, TypeScript/lint, frontend/desktop builds, native GUI launch และ browser `--serve` จาก binary เดียวกัน: CSV/data details, input/output bindings, Save/update-backup/Save As/Open, migration-copy โดย v1 hash ไม่เปลี่ยน, repeated tab-switch/no-leak, GIS maximize/Escape, keyboard splitters และ compact 900px; ยังต้องยืนยัน mouse drag nodes/connections/splitters ใน native GUI จึงไม่ทำเครื่องหมาย complete ในตอนนี้
-- [ ] **5. สร้าง Python package scaffold** — `transport-engine/pyproject.toml`, `src/thclaws_transport/`, version metadata และ package tests; ยังไม่ใส่ proprietary algorithms
+- [x] **5. สร้าง Python source-package scaffold** — `transport-engine/pyproject.toml`, `src/thclaws_transport/`, version metadata และ package tests ลงแล้วพร้อม copied TG ตาม scope ที่ผู้ใช้ปรับ; tests 33/33 ผ่าน ไม่ได้หมายถึง wheel/binary build หรือ full-workflow integration
 - [ ] **6. ล็อก protocol models/JSONL codec** — ทั้ง `run_action`/`run_workflow`, per-node events, artifacts, versions/errors/cancellation; golden fixtures และ invalid-message tests
-- [ ] **7. สร้าง registry และ runner entrypoint** — stable ID → callable; unknown actions fail ชัดเจน; stub actions ไม่มีผลคำนวณเทียม
+- [ ] **7. สร้าง registry และ runner entrypoint — เริ่มบางส่วน** — local prototype dispatch `transport.trip_generation` action เดียวและ reject action อื่น; ยังต้องทำ versioned full-workflow protocol/registry และ stub integration tests ไม่ถือว่า task runner ทั้งหมดเสร็จ
 - [ ] **8. เพิ่ม Rust runner bridge** — engine discovery, subprocess lifecycle, input/output codec, timeout/cleanup, safe execution paths; Python กับ test executable ใช้ contract เดียวกัน
 - [ ] **9. Execution IPC และ Run state** — `transport_run_workflow` และ correlated events; idle/running/succeeded/failed; กัน run ซ้อนและตอบ UI เฉพาะ Transport
 - [ ] **10. Workflow executor ภายใน engine** — validate DAG, dependency ordering, resolve artifacts, node progress, failure/cancellation policy; test synthetic multi-node workflows
 - [ ] **11. End-to-end stub run** — saved project → GUI → Rust → Python → events/results UI; Windows smoke test, tab isolation, no direct Python call ใน React
 - [ ] **12. Packaging abstraction contract tests** — เปลี่ยน Python runner เป็น compiled test executable โดยไม่แก้ project/action IDs/frontend IPC
 
-Tasks 5–7 ควรทำเป็น protocol/scaffold milestone ต่อไป โดยตกลงรูปแบบ messages และ golden fixtures ก่อนผูก UI Run กับ process จริง
+ผู้ใช้ปรับลำดับให้ standalone TG จริงเข้ามาทดสอบใน task 5/บางส่วนของ 7 ก่อน; task 6 และส่วนที่เหลือของ 7 ยังต้องตกลง messages/golden fixtures ก่อนผูก UI Run กับ process จริง ไม่ปิด tasks 8–12 จากผล local TG run
 
-## Repository target สำหรับ engine milestone
+## Repository ปัจจุบันและ target สำหรับ integration milestone
 
 ```text
 thClaws/
@@ -313,28 +347,27 @@ thClaws/
 ├─ crates/core/src/
 │  ├─ transport_project.rs
 │  └─ transport_runner.rs       # อนาคต
-└─ transport-engine/            # ยังไม่สร้าง
+└─ transport-engine/            # เริ่ม TG-only prototype แล้ว
    ├─ pyproject.toml
+   ├─ REVIEW_EBUMPY.md
+   ├─ reference/                # ignored read-only copies + manifests
+   ├─ local-fixtures/           # ignored TG2032 input/expected copies
    ├─ src/thclaws_transport/
    │  ├─ __init__.py
-   │  ├─ protocol.py
-   │  ├─ registry.py
-   │  ├─ runner.py
-   │  ├─ generation/
-   │  ├─ distribution/
-   │  ├─ skim/
-   │  ├─ modal_split/
-   │  ├─ traffic_assignment/
-   │  └─ transit_assignment/
+   │  ├─ runner.py             # local single-action ไม่ใช่ full JSONL workflow
+   │  └─ generation/           # copied formula + explicit-input adapter
    └─ tests/
 ```
 
+`protocol.py`, general registry/workflow executor และ adapters ของ distribution/skim/modal split/traffic assignment/transit assignment ยังเป็นงานอนาคต ไม่มี implementation ใหม่ของโมดูลเหล่านั้นในรอบนี้
+
 ## Model implementation milestones
 
-เริ่มเมื่อ foundation runner/stub contract ผ่านแล้ว และผู้ใช้ให้ algorithm specification, sample inputs และ expected outputs ของโมดูลนั้น:
+เริ่ม standalone TG ตาม scope ที่ผู้ใช้อนุมัติพร้อม copied inputs/expected outputs แล้ว; การเชื่อม algorithm เข้าสู่ UI/full workflow ยังต้องผ่าน runner/stub contract และยืนยัน specification ของแต่ละโมดูลก่อน:
 
 - [ ] File/data adapters: CSV, Shapefile, GeoJSON, Parquet พร้อม content/schema/CRS validation
-- [ ] Trip Generation พร้อม parameters และ regression dataset
+- [x] Trip Generation standalone prototype — copied formula/fixture, explicit-input adapter/local runner และ 2032 regression/safety tests ผ่าน; ไม่มี GUI integration
+- [ ] Trip Generation scientific acceptance และ UI executable contract — calibration/port mapping/integration ยังไม่เสร็จ ไม่ปิดจาก historical reproduction
 - [ ] Trip Distribution พร้อม matrix validation
 - [ ] Modal Split พร้อม utility/choice contract
 - [ ] Skim พร้อม network contract
@@ -350,9 +383,10 @@ thClaws/
 
 ## งานถัดไปเมื่อกลับมาพัฒนา
 
-1. ปิดส่วนที่เหลือของ RV-V: manual mouse resize/drag รอบ Result Viewer; native GUI launch และ desktop/browser verification ของ binary รอบใหม่ผ่านแล้ว
-2. ปิดส่วนที่เหลือของ 4V ใน STATUS: manual mouse-drag acceptance ใน native GUI; native launch, checks/build และ browser end-to-end ของงานชุดที่ 1 ผ่านแล้ว
-3. ถ้าผ่านแล้ว ไม่เริ่มทำ schema tasks 1–2 ซ้ำ: ไปออกแบบ protocol + scaffold + stub tests (tasks 5–7)
-4. ค่อยเชื่อม Rust runner และ UI Run เมื่อ protocol นิ่ง; ผลจริงค่อยเข้าสู่ Result Viewer ผ่าน shared dataset contract
+1. รักษา TG-only tests 52/52, 2032 golden regression และ all-years integrity/accounting/path/no-overwrite checks เป็น gate โดยใช้ destination copies เท่านั้น ไม่ขยายไปโมดูลอื่น
+2. ทบทวน scientific warnings และ executable TG input/output contract กับผู้ใช้; input keys ของ prototype ยังไม่ใช่ port mapping final ของ UI
+3. ปิดส่วนที่เหลือของ RV-V/4V: manual mouse resize/drag ใน native GUI; build/browser/native launch เดิมผ่านแต่ไม่ได้ทดสอบซ้ำใน standalone TG iteration
+4. ไม่ทำ schema tasks 1–2 ซ้ำ: ทำ full protocol + registry/stub integration ส่วนที่เหลือของ tasks 5–7 แล้วเชื่อม Rust/UI Run ตาม tasks 8–12
+5. ผลจริงค่อยเข้าสู่ Result Viewer ผ่าน artifact/shared dataset contract หลัง integration verification ไม่ใช้ demo แทนผลคำนวณ
 
-Definition of done ก่อนนำ algorithm จริงเข้ามา: v2/migration tests ผ่าน, safe Save/Open ผ่าน, named port contract ยืนยันกับโมดูล, runner protocol versioned, Rust→stub end-to-end ผ่าน และไม่มี Python implementation detail ใน React
+Definition of done ก่อนเชื่อม algorithm จริงให้ UI/full workflow ใช้งาน: v2/migration tests ผ่าน, safe Save/Open ผ่าน, named port contract ยืนยันกับโมดูล, runner protocol versioned, Rust→stub end-to-end ผ่าน และไม่มี Python implementation detail ใน React การคัดลอก TG มาทดลองใน isolated package ตอนนี้ไม่ใช่การข้าม gates เหล่านี้และไม่รับรอง production/calibration readiness
